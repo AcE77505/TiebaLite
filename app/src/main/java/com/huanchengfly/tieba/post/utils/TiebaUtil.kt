@@ -93,7 +93,7 @@ object TiebaUtil {
 //        )
         ContextCompat.startForegroundService(
             Intent(context, OKSignService::class.java)
-                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                //.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                 .setAction(OKSignService.ACTION_START_SIGN)
         )
     }
