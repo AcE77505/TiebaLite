@@ -1480,7 +1480,7 @@ object MixedTiebaApiImpl : ITiebaApi {
         fid: String,
         title: String,
         isHide: Int,
-        isTitle: Int,
+        isTitle: Int
     ): Call<CommonResponse> =
         RetrofitTiebaApi.MINI_TIEBA_API.addThread(threadContent, kw, fid, title, isHide, isTitle)
 }
