@@ -429,22 +429,22 @@ interface MiniTiebaApi {
         @Field("fid") fid: String, //吧id
         @Field("title") title: String, //标题
         @Field("is_hide") isHide: Int, //主页显示
-        @Field("is_feedback") isFeedback: Int = 0,
-        @Field("reply_uid") replyUid: String = "null",
-        @Field("takephoto_num") takephotoNum: Int = 0,
-        @Field("z_id") z_id: string? = AccountUtil.getAccountInfo { zid }.orEmpty(),
-        @Field("name_show") nameShow: String? = AccountUtil.getLoginInfo()?.nameShow, //用户名
         @Field("is_ntitle") isTitle: Int, //是否有标题
-        @Field("entrance_type") entranceType: Int = 1,
-        @Field("vcode_tag") vcode_tag: Int = 12,
-        @Field("new_vcode") not_see_lz: Int =1,
-		@Field("anonymous") anonymous: Int = 1,
-		@Field("call_from") callFrom: Int = 2,
-		@Field("can_no_forum") canNoForum: Int = 0,
+        @Field("is_feedback") isFeedback: Int? = 0,
+        @Field("reply_uid") replyUid: String? = "null",
+        @Field("takephoto_num") takephotoNum: Int? = 0,
+        @Field("z_id") z_id: String? = AccountUtil.getAccountInfo { zid }.orEmpty(),
+        @Field("name_show") nameShow: String? = AccountUtil.getLoginInfo()?.nameShow, //用户名
+        @Field("entrance_type") entranceType: Int? = 1,
+        @Field("vcode_tag") vcode_tag: Int? = 12,
+        @Field("new_vcode") not_see_lz: Int? =1,
+		@Field("anonymous") anonymous: Int? = 1,
+		@Field("call_from") callFrom: Int? = 2,
+		@Field("can_no_forum") canNoForum: Int? = 0,
 		@retrofit2.http.Header("client_user_token") clientUserToken: String? = AccountUtil.getUid(),
-        @Field("cuid_gid") cuidGid: String = "",
+        @Field("cuid_gid") cuidGid: String? = "",
         @Field("tbs") tbs: String? = AccountUtil.getLoginInfo()?.tbs,
-        @Field("stoken") stoken: String? = AccountUtil.getSToken(),
+        @Field("stoken") stoken: String? = AccountUtil.getSToken()
     ): Call<CommonResponse>
 
 }
