@@ -621,7 +621,18 @@ fun ForumPage(
                                     }
 
                                     else -> {
-                                        context.toastShort(R.string.toast_feature_unavailable)
+                                        //context.toastShort(R.string.toast_feature_unavailable)
+                                        if (LocalAccount.current != null) {
+                                            context.toastShort(R.string.title_not_logged_in)
+                                        } else {
+                                            navigator.navigate(
+                                                ReplyPageDestination(
+                                                    forumId = forumInfo!!.get { id },
+                                                    forumName = forumInfo!!.get { name },
+                                                    threadId = 0,
+                                                )
+                                            )
+                                        }
                                     }
                                 }
                             },
