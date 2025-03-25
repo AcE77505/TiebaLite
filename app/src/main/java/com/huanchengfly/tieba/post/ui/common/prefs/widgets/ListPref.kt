@@ -10,6 +10,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import com.huanchengfly.tieba.post.R
 import com.huanchengfly.tieba.post.ui.common.prefs.LocalPrefsDataStore
@@ -168,4 +169,84 @@ fun ListPref(
 //            ),
 //        )
 //    }
+}
+
+
+@ExperimentalMaterialApi
+@ExperimentalComposeUiApi
+@Composable
+fun ListPrefInt(
+    key: String,
+    title: String,
+    modifier: Modifier = Modifier,
+    summary: String? = null,
+    defaultValue: Int? = null,
+    onValueChange: ((Int) -> Unit)? = null,
+    useSelectedAsSummary: Boolean = false,
+    textColor: Color = MaterialTheme.colors.onBackground,
+    enabled: Boolean = true,
+    leadingIcon: @Composable (() -> Unit)? = null,
+    entries: Map<Int, String> = emptyMap(), //TODO: Change to List?
+    icons: Map<Int, @Composable () -> Unit> = emptyMap(),
+) {
+    val dialogState = rememberDialogState()
+    val selectionKey = intPreferencesKey(key)
+    val scope = rememberCoroutineScope()
+
+    val datastore = LocalPrefsDataStore.current
+    val prefs by remember { datastore.data }.collectAsState(initial = null)
+
+    var selected = defaultValue
+    prefs?.get(selectionKey)?.also { selected = it } // starting value if it exists in datastore
+
+    fun edit(current: Pair<Int, String>) = run {
+        selected = current.first
+        onValueChange?.invoke(current.first)
+        scope.launch {
+            try {
+                datastore.edit { preferences ->
+                    preferences[selectionKey] = current.first
+                }
+            } catch (e: Exception) {
+                Log.e("ListPref", "Could not write pref $key to database. ${e.printStackTrace()}")
+            }
+        }
+    }
+
+    TextPref(
+        title = title,
+        summary = when {
+            useSelectedAsSummary && selected != null -> entries[selected]
+            useSelectedAsSummary && selected == null -> "Not Set"
+            else -> summary
+        },
+        leadingIcon = leadingIcon,
+        modifier = modifier,
+        textColor = textColor,
+        enabled = true,
+        onClick = { if (enabled) dialogState.show() },
+    )
+
+    val itemTitle = remember(entries) { entries.map { it.value }.toImmutableList() }
+    val itemValues = remember(entries) { entries.map { it.key }.toImmutableList() }
+
+    Dialog(
+        dialogState = dialogState,
+        title = { Text(text = title) },
+        buttons = {
+            DialogNegativeButton(text = stringResource(id = R.string.button_cancel))
+        }
+    ) {
+        ListSinglePicker(
+            itemTitles = itemTitle,
+            itemValues = itemValues,
+            selectedPosition = entries.keys.indexOf(selected),
+            onItemSelected = { _, title, value, _ ->
+                edit(current = value to title)
+                dismiss()
+            },
+            modifier = Modifier.padding(bottom = 16.dp),
+            itemIcons = icons.toImmutableMap()
+        )
+    }
 }

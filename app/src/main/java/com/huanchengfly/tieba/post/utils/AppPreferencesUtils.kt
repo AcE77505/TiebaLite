@@ -118,6 +118,8 @@ open class AppPreferencesUtils private constructor(ctx: Context) {
 
     var hideExplore by DataStoreDelegates.boolean(defaultValue = false)
 
+    var defaultStart by DataStoreDelegates.int(defaultValue = 0)
+
     var hideForumIntroAndStat by DataStoreDelegates.boolean(defaultValue = false)
 
     var hideMedia by DataStoreDelegates.boolean(defaultValue = false)

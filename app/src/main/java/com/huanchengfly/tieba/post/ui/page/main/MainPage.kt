@@ -15,6 +15,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
@@ -24,6 +25,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.datastore.preferences.core.booleanPreferencesKey
+import androidx.datastore.preferences.core.intPreferencesKey
 import com.huanchengfly.tieba.post.LocalDevicePosture
 import com.huanchengfly.tieba.post.LocalNotificationCountFlow
 import com.huanchengfly.tieba.post.R
@@ -83,9 +85,11 @@ private fun NavigationWrapper(
                 navigationContentPosition = navigationContentPosition
             )
         }
-        Column(modifier = Modifier
-            .weight(1f)
-            .fillMaxHeight()) {
+        Column(
+            modifier = Modifier
+                .weight(1f)
+                .fillMaxHeight()
+        ) {
             content()
         }
     }
@@ -120,12 +124,20 @@ fun MainPage(
         key = booleanPreferencesKey("hideExplore"),
         defaultValue = LocalContext.current.appPreferences.hideExplore
     )
+    val defaultStart by rememberPreferenceAsState(
+        key = intPreferencesKey("defaultStart"),
+        defaultValue = LocalContext.current.appPreferences.defaultStart
+    )
     val pageCount by remember {
         derivedStateOf {
             if (hideExplore) 3 else 4
         }
     }
-    val pagerState = rememberPagerState { pageCount }
+    val pagerState = rememberPagerState(
+        pageCount = { pageCount },
+        initialPage = if (hideExplore  && defaultStart > 0 ) defaultStart-1 else defaultStart
+    )
+
     LaunchedEffect(hideExplore) {
         if (pagerState.currentPage == 3 && hideExplore) {
             pagerState.scrollToPage(2)
@@ -240,7 +252,7 @@ fun MainPage(
     }
     val onReselected: (Int) -> Unit = {
         coroutineScope.emitGlobalEvent(
-            GlobalEvent.Refresh(navigationItems[it].id)
+            GlobalEvent.Refresh(key = navigationItems[it].id)
         )
     }
     ProvideNavigator(navigator = navigator) {

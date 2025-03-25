@@ -628,7 +628,7 @@ fun ForumPage(
                     )
                 },
                 floatingActionButton = {
-                    if (context.appPreferences.forumFabFunction != "hide") {
+                    if (context.appPreferences.forumFabFunction != "hide" || (context.appPreferences.hideReply == true && context.appPreferences.forumFabFunction == "post")) {
                         FloatingActionButton(
                             onClick = {
                                 when (context.appPreferences.forumFabFunction) {

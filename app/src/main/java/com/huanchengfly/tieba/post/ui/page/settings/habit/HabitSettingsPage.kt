@@ -9,6 +9,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.BrandingWatermark
 import androidx.compose.material.icons.automirrored.outlined.ExitToApp
 import androidx.compose.material.icons.automirrored.rounded.Sort
+import androidx.compose.material.icons.filled.TabletAndroid
 import androidx.compose.material.icons.outlined.CalendarViewDay
 import androidx.compose.material.icons.outlined.ImageSearch
 import androidx.compose.material.icons.outlined.NightsStay
@@ -32,6 +33,7 @@ import com.huanchengfly.tieba.post.R
 import com.huanchengfly.tieba.post.dataStore
 import com.huanchengfly.tieba.post.ui.common.prefs.PrefsScreen
 import com.huanchengfly.tieba.post.ui.common.prefs.widgets.ListPref
+import com.huanchengfly.tieba.post.ui.common.prefs.widgets.ListPrefInt
 import com.huanchengfly.tieba.post.ui.common.prefs.widgets.SwitchPref
 import com.huanchengfly.tieba.post.ui.page.settings.LeadingIcon
 import com.huanchengfly.tieba.post.ui.widgets.compose.AvatarIcon
@@ -174,6 +176,28 @@ fun HabitSettingsPage(
                         "refresh" to stringResource(id = R.string.btn_refresh),
                         "back_to_top" to stringResource(id = R.string.btn_back_to_top),
                         "hide" to stringResource(id = R.string.btn_hide)
+                    )
+                )
+            }
+            prefsItem {
+                ListPrefInt(
+                    key = "defaultStart",
+                    title = stringResource(id = R.string.settings_default_start),
+                    defaultValue = 0,
+                    leadingIcon = {
+                        LeadingIcon {
+                            AvatarIcon(
+                                icon = Icons.Default.TabletAndroid,
+                                size = Sizes.Small,
+                                contentDescription = null,
+                            )
+                        }
+                    },
+                    useSelectedAsSummary = true,
+                    entries = mapOf(
+                        0 to stringResource(id = R.string.title_main),
+                        1 to stringResource(id = R.string.title_explore),
+                        2 to stringResource(id = R.string.title_notifications)
                     )
                 )
             }
