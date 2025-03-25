@@ -45,7 +45,7 @@ jobs:
 #          fi
 
       - name: Setup Gradle
-        uses: gradle/setup-gradle@v4
+        uses: gradle/actions/setup-gradle@v4
         with:
           gradle-home-cache-cleanup: true
           cache-read-only: ${{ github.ref != 'refs/heads/master' && github.ref != 'refs/heads/4.0-dev' }}
