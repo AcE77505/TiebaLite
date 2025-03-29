@@ -144,7 +144,7 @@ fun SearchThreadPage(
                         )
                     },
                     onItemUserClick = {
-                        navigator.navigate(UserProfilePageDestination(it.userId.toLong()))
+                        if(!it.userId.isNullOrEmpty())navigator.navigate(UserProfilePageDestination(it.userId.toLong()))
                     },
                     onItemForumClick = {
                         navigator.navigate(

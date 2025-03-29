@@ -78,7 +78,7 @@ fun QuotePostCard(
 ) {
     val quoteContentString = remember(quotePostInfo) {
         buildAnnotatedStringWithUser(
-            quotePostInfo.user.userId,
+            quotePostInfo.user.userId.toString(),
             quotePostInfo.user.userName ?: "",
             quotePostInfo.user.showNickname,
             quotePostInfo.content
@@ -119,7 +119,7 @@ fun MainPostCard(
 ) {
     val titleString = remember(mainPost) {
         buildAnnotatedStringWithUser(
-            mainPost.user.userId,
+            mainPost.user.userId.toString(),
             mainPost.user.userName ?: "",
             mainPost.user.showNickname,
             mainPost.title
