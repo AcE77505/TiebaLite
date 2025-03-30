@@ -1489,5 +1489,12 @@ object MixedTiebaApiImpl : ITiebaApi {
         isHide: Int,
         isTitle: Int
     ): Flow<AddThreadBean> =
-    RetrofitTiebaApi.MINI_TIEBA_API.addThreadFlow(threadContent, kw, fid, title, isHide, isTitle)
+        RetrofitTiebaApi.MINI_TIEBA_API.addThreadFlow(
+            threadContent,
+            kw,
+            fid,
+            title,
+            isHide,
+            isTitle
+        )
 }

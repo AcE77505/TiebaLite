@@ -1358,7 +1358,7 @@ interface ITiebaApi {
      *
      * **需登录**
      *
-     * @param forumId 吧 ID
+     * @param forumId 吧 ID（不可为null，0）
      * @param forumName 吧名
      * @param threadId 贴子 ID
      * @param tbs tbs

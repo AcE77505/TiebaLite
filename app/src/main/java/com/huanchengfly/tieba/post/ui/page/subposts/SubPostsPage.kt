@@ -231,12 +231,12 @@ internal fun SubPostsContent(
                     if (post?.get { author_id } == 0L) post?.get { author?.id } == account?.uid?.toLongOrNull() else post?.get { author_id } == account?.uid?.toLongOrNull()
                 viewModel.send(
                     SubPostsUiIntent.DeletePost(
-                        forumId = forumId,
+                        forumId = forum?.get { id } ?: forumId,
                         forumName = forum?.get { name }.orEmpty(),
                         threadId = threadId,
                         postId = postId,
                         deleteMyPost = isSelfPost,
-                        tbs = anti?.get { tbs }?:account?.tbs,
+                        tbs = anti?.get { tbs } ?: account?.tbs,
                     )
                 )
             } else {
@@ -245,13 +245,13 @@ internal fun SubPostsContent(
                         deleteSubPost!!.get { author_id } == account?.uid?.toLongOrNull()
                 viewModel.send(
                     SubPostsUiIntent.DeletePost(
-                        forumId = forumId,
+                        forumId = forum?.get { id } ?: forumId,
                         forumName = forum?.get { name }.orEmpty(),
                         threadId = threadId,
                         postId = postId,
                         subPostId = deleteSubPost!!.get { id },
                         deleteMyPost = isSelfSubPost,
-                        tbs = anti?.get { tbs }?:account?.tbs,
+                        tbs = anti?.get { tbs } ?: account?.tbs,
                     )
                 )
             }
@@ -323,7 +323,7 @@ internal fun SubPostsContent(
                             IconButton(onClick = {
                                 navigator.navigate(
                                     ThreadPageDestination(
-                                        forumId = forumId,
+                                        forumId = forum?.get { id } ?: forumId,
                                         threadId = threadId,
                                         postId = postId
                                     )
@@ -364,11 +364,11 @@ internal fun SubPostsContent(
                                     .clickable {
                                         val fid = forum?.get { id } ?: forumId
                                         val forumName = forum?.get { name }
-                                        if (!forumName.isNullOrEmpty()) {
+                                        if (fid != 0L) {
                                             showReplyDialog(
                                                 ReplyArgs(
                                                     forumId = fid,
-                                                    forumName = forumName,
+                                                    forumName = forumName.toString(),
                                                     threadId = threadId,
                                                     postId = postId,
                                                 )
@@ -440,18 +440,21 @@ internal fun SubPostsContent(
                                         )
                                     },
                                     onReplyClick = {
-                                        showReplyDialog(
-                                            ReplyArgs(
-                                                forumId = forumId,
-                                                forumName = forum?.get { name } ?: "",
-                                                threadId = threadId,
-                                                postId = postId,
-                                                replyUserId = it.author?.id ?: it.author_id,
-                                                replyUserName = it.author?.nameShow.takeIf { name -> !name.isNullOrEmpty() }
-                                                    ?: it.author?.name,
-                                                replyUserPortrait = it.author?.portrait,
+                                        val fid = forum?.get { id } ?: forumId
+                                        if (fid != 0L) {
+                                            showReplyDialog(
+                                                ReplyArgs(
+                                                    forumId = fid,
+                                                    forumName = forum?.get { name } ?: "",
+                                                    threadId = threadId,
+                                                    postId = postId,
+                                                    replyUserId = it.author?.id ?: it.author_id,
+                                                    replyUserName = it.author?.nameShow.takeIf { name -> !name.isNullOrEmpty() }
+                                                        ?: it.author?.name,
+                                                    replyUserPortrait = it.author?.portrait,
+                                                )
                                             )
-                                        )
+                                        }
                                     },
                                     onMenuCopyClick = {
                                         navigator.navigate(
@@ -506,19 +509,22 @@ internal fun SubPostsContent(
                                 )
                             },
                             onReplyClick = {
-                                showReplyDialog(
-                                    ReplyArgs(
-                                        forumId = forumId,
-                                        forumName = forum?.get { name } ?: "",
-                                        threadId = threadId,
-                                        postId = postId,
-                                        subPostId = it.id,
-                                        replyUserId = it.author?.id ?: it.author_id,
-                                        replyUserName = it.author?.nameShow.takeIf { name -> !name.isNullOrEmpty() }
-                                            ?: it.author?.name,
-                                        replyUserPortrait = it.author?.portrait,
+                                val fid = forum?.get { id } ?: forumId
+                                if (fid != 0L) {
+                                    showReplyDialog(
+                                        ReplyArgs(
+                                            forumId = fid,
+                                            forumName = forum?.get { name } ?: "",
+                                            threadId = threadId,
+                                            postId = postId,
+                                            subPostId = it.id,
+                                            replyUserId = it.author?.id ?: it.author_id,
+                                            replyUserName = it.author?.nameShow.takeIf { name -> !name.isNullOrEmpty() }
+                                                ?: it.author?.name,
+                                            replyUserPortrait = it.author?.portrait,
+                                        )
                                     )
-                                )
+                                }
                             },
                             onMenuCopyClick = {
                                 navigator.navigate(
