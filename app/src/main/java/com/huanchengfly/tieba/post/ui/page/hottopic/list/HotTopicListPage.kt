@@ -2,6 +2,7 @@ package com.huanchengfly.tieba.post.ui.page.hottopic.list
 
 import android.graphics.Typeface
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -47,6 +48,8 @@ import com.huanchengfly.tieba.post.ui.common.theme.compose.Shapes
 import com.huanchengfly.tieba.post.ui.common.theme.compose.White
 import com.huanchengfly.tieba.post.ui.common.theme.compose.Yellow
 import com.huanchengfly.tieba.post.ui.common.theme.compose.pullRefreshIndicator
+import com.huanchengfly.tieba.post.ui.page.destinations.TopicDetailPageDestination
+import com.huanchengfly.tieba.post.ui.page.destinations.TopicDetailPageDestination.invoke
 import com.huanchengfly.tieba.post.ui.widgets.compose.BackNavigationIcon
 import com.huanchengfly.tieba.post.ui.widgets.compose.MyLazyColumn
 import com.huanchengfly.tieba.post.ui.widgets.compose.NetworkImage
@@ -207,7 +210,10 @@ fun HotTopicListPage(
                 ) { index, item ->
                     if (index < 3) {
                         Column(
-                            modifier = Modifier.fillMaxWidth(),
+                            modifier = Modifier.fillMaxWidth()
+                                .clickable {
+                                    navigator.navigate(TopicDetailPageDestination(item.topic_id, item.topic_name))
+                                },
                             verticalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
                             TopicImage(index = index, imageUri = item.topic_image)
@@ -215,7 +221,10 @@ fun HotTopicListPage(
                         }
                     } else {
                         Row(
-                            modifier = Modifier.fillMaxWidth(),
+                            modifier = Modifier.fillMaxWidth()
+                                .clickable {
+                                    navigator.navigate(TopicDetailPageDestination(item.topic_id, item.topic_name))
+                                },
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(8.dp),
                         ) {

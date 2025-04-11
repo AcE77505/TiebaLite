@@ -115,6 +115,8 @@
     <string name="summary_auto_sign_time">当前设置为 %1$s</string>
     <string name="tip_auto_sign">请允许贴吧 Lite 的自启动并忽略“电池优化”，否则可能无法正常唤醒签到。\n若使用的是 MIUI 等国产定制 UI，你还需要在系统设置中进行相应修改。</string>
     <string name="title_forum">%1$s吧</string>
+    <string name="title_topic">#%1$s#</string>
+    <string name="topic_index">贴吧话题榜 No.%1$d</string>
     <string name="forum_post_num">帖子数 %1$s</string>
     <string name="forum_concern_num">关注数 %1$s</string>
     <string name="menu_edit_info">编辑资料</string>

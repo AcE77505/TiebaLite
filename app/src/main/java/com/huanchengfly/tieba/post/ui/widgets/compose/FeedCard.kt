@@ -67,6 +67,7 @@ import com.google.accompanist.placeholder.material.placeholder
 import com.google.accompanist.systemuicontroller.rememberSystemUiController
 import com.huanchengfly.tieba.post.App
 import com.huanchengfly.tieba.post.R
+import com.huanchengfly.tieba.post.api.models.ThreadBean
 import com.huanchengfly.tieba.post.api.models.protos.Media
 import com.huanchengfly.tieba.post.api.models.protos.OriginThreadInfo
 import com.huanchengfly.tieba.post.api.models.protos.PostInfoList
@@ -74,10 +75,12 @@ import com.huanchengfly.tieba.post.api.models.protos.SimpleForum
 import com.huanchengfly.tieba.post.api.models.protos.ThreadInfo
 import com.huanchengfly.tieba.post.api.models.protos.User
 import com.huanchengfly.tieba.post.api.models.protos.VideoInfo
+import com.huanchengfly.tieba.post.api.models.ThreadInfoBean
 import com.huanchengfly.tieba.post.api.models.protos.abstractText
 import com.huanchengfly.tieba.post.api.models.protos.renders
 import com.huanchengfly.tieba.post.arch.BaseComposeActivity.Companion.LocalWindowSizeClass
 import com.huanchengfly.tieba.post.arch.ImmutableHolder
+import com.huanchengfly.tieba.post.arch.getOrNull
 import com.huanchengfly.tieba.post.arch.wrapImmutable
 import com.huanchengfly.tieba.post.findActivity
 import com.huanchengfly.tieba.post.goToActivity
@@ -746,6 +749,7 @@ fun ThreadShareBtn(
 }
 
 @Composable
+@JvmName("FeedCardForThreadInfo")
 fun FeedCard(
     item: ImmutableHolder<ThreadInfo>,
     onClick: (ThreadInfo) -> Unit,
@@ -817,6 +821,77 @@ fun FeedCard(
                 ThreadAgreeBtn(
                     hasAgree = item.get { agree?.hasAgree == 1 },
                     agreeNum = item.get { agreeNum },
+                    onClick = { onAgree(item.get()) },
+                    modifier = Modifier.weight(1f)
+                )
+            }
+        },
+        onClick = { onClick(item.get()) },
+        modifier = modifier,
+    )
+}
+
+
+@Composable
+@JvmName("FeedCardForThreadBean")
+fun FeedCard(
+    item: ImmutableHolder<ThreadBean>,
+    onClick: (ThreadBean) -> Unit,
+    onAgree: (ThreadBean) -> Unit,
+    modifier: Modifier = Modifier,
+    onClickReply: (ThreadBean) -> Unit = {},
+    onClickUser: (id: Long) -> Unit = {},
+    onClickForum: (name: String) -> Unit = {},
+    onClickOriginThread: (OriginThreadInfo) -> Unit = {},
+) {
+    Card(
+        header = {
+            UserHeader(
+                nameProvider = { item.get { threadInfo.author.name.toString() } },
+                nameShowProvider = { item.get { threadInfo.author.showNickName } },
+                portraitProvider = { item.get { threadInfo.author.portrait } },
+                timeProvider = { item.get { threadInfo.createTime.toInt() } },
+                onClick = {
+                    onClickUser(item.get { threadInfo.userId })
+                },
+            )
+        },
+        content = {
+            ThreadContent(
+                title =item.get{threadInfo.title!!},
+                abstractText = item.get { threadInfo.abstractText },
+                showTitle = item.get { threadInfo.title?.isNotBlank() == true },
+                showAbstract = item.get { threadInfo.abstractText.isNotBlank() },
+            )
+
+            ThreadMedia(
+                forumId = item.get { threadInfo.forumId },
+                forumName = item.get { threadInfo.forumName },
+                threadId = item.get { threadInfo.threadId },
+            )
+            ThreadForumInfo(
+                forumName = item.get { threadInfo.forumName },
+                forumAvatar = null,
+                onClick = { onClickForum(item.get { threadInfo.forumName }) }
+            )
+        },
+        action = {
+            Row(modifier = Modifier.fillMaxWidth()) {
+                ThreadShareBtn(
+                    shareNum = item.get { threadInfo.shareNum }.toLong(),
+                    onClick = {},
+                    modifier = Modifier.weight(1f)
+                )
+
+                ThreadReplyBtn(
+                    replyNum = item.get { threadInfo.replyNum },
+                    onClick = { onClickReply(item.get()) },
+                    modifier = Modifier.weight(1f)
+                )
+
+                ThreadAgreeBtn(
+                    hasAgree = item.get { threadInfo.agree.hasAgree == 1 },
+                    agreeNum = item.get { threadInfo.agreeNum },
                     onClick = { onAgree(item.get()) },
                     modifier = Modifier.weight(1f)
                 )

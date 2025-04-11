@@ -54,6 +54,7 @@ import com.huanchengfly.tieba.post.ui.page.LocalNavigator
 import com.huanchengfly.tieba.post.ui.page.destinations.ForumPageDestination
 import com.huanchengfly.tieba.post.ui.page.destinations.HotTopicListPageDestination
 import com.huanchengfly.tieba.post.ui.page.destinations.ThreadPageDestination
+import com.huanchengfly.tieba.post.ui.page.destinations.TopicDetailPageDestination
 import com.huanchengfly.tieba.post.ui.page.destinations.UserProfilePageDestination
 import com.huanchengfly.tieba.post.ui.widgets.compose.Container
 import com.huanchengfly.tieba.post.ui.widgets.compose.FeedCard
@@ -139,6 +140,9 @@ fun HotPage(
                                     verticalAlignment = Alignment.CenterVertically,
                                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                                     modifier = Modifier.padding(vertical = 8.dp)
+                                        .clickable {
+                                            navigator.navigate(TopicDetailPageDestination(item.get { topicId }, item.get { topicName }))
+                                        }
                                 ) {
                                     Text(
                                         text = "${index + 1}",
@@ -157,7 +161,8 @@ fun HotPage(
                                                 "bebas.ttf"
                                             )
                                         ),
-                                        modifier = Modifier.padding(bottom = 2.dp)
+                                        modifier = Modifier
+                                            .padding(bottom = 2.dp)
                                     )
                                     Text(
                                         text = item.get { topicName },
