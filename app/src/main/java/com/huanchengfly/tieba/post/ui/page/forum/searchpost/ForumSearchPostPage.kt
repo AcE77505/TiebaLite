@@ -78,6 +78,7 @@ import com.huanchengfly.tieba.post.ui.widgets.compose.MyScaffold
 import com.huanchengfly.tieba.post.ui.widgets.compose.SearchBox
 import com.huanchengfly.tieba.post.ui.widgets.compose.SearchThreadList
 import com.huanchengfly.tieba.post.ui.widgets.compose.TopAppBarContainer
+import com.huanchengfly.tieba.post.ui.widgets.compose.debounceClickable
 import com.huanchengfly.tieba.post.ui.widgets.compose.picker.ListSinglePicker
 import com.huanchengfly.tieba.post.ui.widgets.compose.rememberMenuState
 import com.huanchengfly.tieba.post.ui.widgets.compose.states.StateScreen
@@ -124,7 +125,7 @@ private fun SearchHistoryList(
             if (hasItem) {
                 Text(
                     text = stringResource(id = R.string.button_clear_all),
-                    modifier = Modifier.clickable(onClick = onClear),
+                    modifier = Modifier.debounceClickable(onClick = onClear),
                     style = MaterialTheme.typography.button
                 )
             }
@@ -342,7 +343,7 @@ fun ForumSearchPostPage(
                                 Box(
                                     modifier = Modifier
                                         .clip(RoundedCornerShape(100))
-                                        .clickable(
+                                        .debounceClickable(
                                             interactionSource = remember { MutableInteractionSource() },
                                             indication = rememberRipple(bounded = false, 24.dp),
                                             role = Role.Button,

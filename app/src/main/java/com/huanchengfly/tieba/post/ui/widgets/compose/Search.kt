@@ -472,11 +472,12 @@ fun SearchBox(
                 Box(
                     modifier = Modifier
                         .clip(RoundedCornerShape(100))
-                        .clickable(
+                        .debounceClickable(
                             interactionSource = remember { MutableInteractionSource() },
                             indication = rememberRipple(bounded = false, 24.dp),
-                            role = Role.Button
-                        ) { onKeywordSubmit(keyword) },
+                            role = Role.Button,
+                            onClick =  { onKeywordSubmit(keyword) }
+                        ),
                     contentAlignment = Alignment.Center,
                 ) {
                     Icon(

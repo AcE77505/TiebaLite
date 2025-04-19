@@ -17,6 +17,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.Saver
@@ -59,6 +60,8 @@ fun ClickMenu(
     content: @Composable () -> Unit,
 ) {
     val menuScope = MenuScope(menuState, onDismiss)
+    var lastClickTime by remember { mutableLongStateOf(0L) }
+    val clickableInterval = 500L
     LaunchedEffect(key1 = null) {
         launch {
             interactionSource.interactions
@@ -76,7 +79,11 @@ fun ClickMenu(
                     interactionSource = interactionSource,
                     indication = indication,
                     onClick = {
-                        menuState.expanded = true
+                        val currentTime = System.currentTimeMillis()
+                        if (currentTime - lastClickTime >= clickableInterval) {
+                            lastClickTime = currentTime
+                            menuState.expanded = true
+                        }
                     }
                 )
         ) {
@@ -118,6 +125,8 @@ fun LongClickMenu(
     indication: Indication? = LocalIndication.current,
     content: @Composable () -> Unit,
 ) {
+    var lastClickTime by remember { mutableLongStateOf(0L) }
+    val clickableInterval = 500L
     LaunchedEffect(Unit) {
         launch {
             interactionSource.interactions
@@ -138,7 +147,11 @@ fun LongClickMenu(
                     menuState.expanded = true
                 }
             ) {
-                onClick?.invoke()
+                val currentTime = System.currentTimeMillis()
+                if (currentTime - lastClickTime >= clickableInterval) {
+                    lastClickTime = currentTime
+                    onClick?.invoke()
+                }
             }
     ) {
         content()

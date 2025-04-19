@@ -2,7 +2,6 @@ package com.huanchengfly.tieba.post.ui.page.search.forum
 
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -50,6 +49,7 @@ import com.huanchengfly.tieba.post.ui.widgets.compose.LazyLoad
 import com.huanchengfly.tieba.post.ui.widgets.compose.LocalShouldLoad
 import com.huanchengfly.tieba.post.ui.widgets.compose.MyLazyColumn
 import com.huanchengfly.tieba.post.ui.widgets.compose.Sizes
+import com.huanchengfly.tieba.post.ui.widgets.compose.debounceClickable
 import com.huanchengfly.tieba.post.ui.widgets.compose.states.StateScreen
 import kotlinx.collections.immutable.persistentListOf
 
@@ -205,7 +205,7 @@ private fun SearchForumItem(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(onClick = onClick)
+            .debounceClickable(onClick = onClick)
             .padding(16.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(16.dp),

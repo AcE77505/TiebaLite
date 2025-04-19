@@ -3,7 +3,6 @@ package com.huanchengfly.tieba.post.ui.page.main.explore.hot
 import android.graphics.Typeface
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -63,6 +62,7 @@ import com.huanchengfly.tieba.post.ui.widgets.compose.MyLazyColumn
 import com.huanchengfly.tieba.post.ui.widgets.compose.ProvideContentColor
 import com.huanchengfly.tieba.post.ui.widgets.compose.VerticalDivider
 import com.huanchengfly.tieba.post.ui.widgets.compose.VerticalGrid
+import com.huanchengfly.tieba.post.ui.widgets.compose.debounceClickable
 import com.huanchengfly.tieba.post.ui.widgets.compose.items
 import com.huanchengfly.tieba.post.ui.widgets.compose.itemsIndexed
 import com.huanchengfly.tieba.post.utils.StringUtil.getShortNumString
@@ -140,9 +140,9 @@ fun HotPage(
                                     verticalAlignment = Alignment.CenterVertically,
                                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                                     modifier = Modifier.padding(vertical = 8.dp)
-                                        .clickable {
+                                        .debounceClickable(onClick =  {
                                             navigator.navigate(TopicDetailPageDestination(item.get { topicId }, item.get { topicName }))
-                                        }
+                                        })
                                 ) {
                                     Text(
                                         text = "${index + 1}",
@@ -200,9 +200,9 @@ fun HotPage(
                                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                                         modifier = Modifier
                                             .fillMaxWidth()
-                                            .clickable {
+                                            .debounceClickable( onClick =  {
                                                 navigator.navigate(HotTopicListPageDestination)
-                                            }
+                                            })
                                             .padding(vertical = 8.dp)
                                     ) {
                                         Text(
@@ -436,7 +436,7 @@ private fun ThreadListTab(
             .fillMaxWidth()
             .clip(RoundedCornerShape(100))
             .background(backgroundColor)
-            .clickable(onClick = onSelected)
+            .debounceClickable(onClick = onSelected)
             .padding(vertical = 4.dp),
         fontSize = 12.sp,
         fontWeight = FontWeight.Bold

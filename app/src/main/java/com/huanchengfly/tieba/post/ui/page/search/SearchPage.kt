@@ -3,7 +3,6 @@ package com.huanchengfly.tieba.post.ui.page.search
 import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
@@ -89,6 +88,7 @@ import com.huanchengfly.tieba.post.ui.widgets.compose.SearchBox
 import com.huanchengfly.tieba.post.ui.widgets.compose.TabClickMenu
 import com.huanchengfly.tieba.post.ui.widgets.compose.TabRow
 import com.huanchengfly.tieba.post.ui.widgets.compose.TopAppBarContainer
+import com.huanchengfly.tieba.post.ui.widgets.compose.debounceClickable
 import com.huanchengfly.tieba.post.ui.widgets.compose.picker.ListSinglePicker
 import com.ramcosta.composedestinations.annotation.DeepLink
 import com.ramcosta.composedestinations.annotation.Destination
@@ -335,9 +335,9 @@ private fun SearchSuggestionList(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(16.dp),
                     modifier = Modifier
-                        .clickable {
+                        .debounceClickable(onClick =  {
                             onItemClick(it)
-                        }
+                        })
                         .padding(horizontal = 16.dp, vertical = 8.dp)
                 ) {
                     Icon(
@@ -480,7 +480,7 @@ private fun SearchHistoryList(
             if (hasItem) {
                 Text(
                     text = stringResource(id = R.string.button_clear_all),
-                    modifier = Modifier.clickable(onClick = onClear),
+                    modifier = Modifier.debounceClickable(onClick = onClear),
                     style = MaterialTheme.typography.button
                 )
             }
@@ -576,7 +576,7 @@ private fun SearchTopBar(
             Box(
                 modifier = Modifier
                     .clip(RoundedCornerShape(100))
-                    .clickable(
+                    .debounceClickable(
                         interactionSource = remember { MutableInteractionSource() },
                         indication = rememberRipple(bounded = false, 24.dp),
                         role = Role.Button,

@@ -96,6 +96,7 @@ import com.huanchengfly.tieba.post.ui.widgets.compose.TextButton
 import com.huanchengfly.tieba.post.ui.widgets.compose.TipScreen
 import com.huanchengfly.tieba.post.ui.widgets.compose.Toolbar
 import com.huanchengfly.tieba.post.ui.widgets.compose.accountNavIconIfCompact
+import com.huanchengfly.tieba.post.ui.widgets.compose.debounceClickable
 import com.huanchengfly.tieba.post.ui.widgets.compose.rememberDialogState
 import com.huanchengfly.tieba.post.ui.widgets.compose.rememberMenuState
 import com.huanchengfly.tieba.post.ui.widgets.compose.states.StateScreen
@@ -105,7 +106,10 @@ import com.huanchengfly.tieba.post.utils.TiebaUtil
 import com.huanchengfly.tieba.post.utils.appPreferences
 import kotlinx.collections.immutable.persistentListOf
 
-private fun getGridCells(context: Context, listSingle: Boolean = context.appPreferences.listSingle): GridCells {
+private fun getGridCells(
+    context: Context,
+    listSingle: Boolean = context.appPreferences.listSingle
+): GridCells {
     return if (listSingle) {
         GridCells.Fixed(1)
     } else {
@@ -119,7 +123,7 @@ fun SearchBoxPreview() {
     SearchBox(
         backgroundColor = Color(0xFFF8F8F8),
         contentColor = Color(0xFFBFBFBF),
-        onClick =  {}
+        onClick = {}
     )
 }
 
@@ -141,7 +145,7 @@ fun SearchBox(
             shape = RoundedCornerShape(6.dp),
             modifier = Modifier
                 .fillMaxWidth()
-                .clickable(onClick = onClick)
+                .debounceClickable(onClick = onClick)
         ) {
             Row(
                 verticalAlignment = CenterVertically,
@@ -573,13 +577,13 @@ fun HomePage(
                                                         .height(IntrinsicSize.Min)
                                                         .clip(RoundedCornerShape(100))
                                                         .background(color = ExtendedTheme.colors.chip)
-                                                        .clickable {
+                                                        .debounceClickable(onClick = {
                                                             navigator.navigate(
                                                                 ForumPageDestination(
                                                                     it.data
                                                                 )
                                                             )
-                                                        }
+                                                        })
                                                         .padding(4.dp),
                                                     verticalAlignment = CenterVertically,
                                                     horizontalArrangement = Arrangement.spacedBy(4.dp)
@@ -781,11 +785,14 @@ fun EmptyScreen(
         actions = {
             if (!loggedIn) {
                 Button(
-                    onClick = {
-                        navigator.navigate(LoginPageDestination)
-                    },
+                    onClick = {},
                     modifier = Modifier
                         .fillMaxWidth()
+                        .debounceClickable(
+                            onClick = {
+                                navigator.navigate(LoginPageDestination)
+                            }
+                        )
                 ) {
                     Text(text = stringResource(id = R.string.button_login))
                 }

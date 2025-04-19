@@ -2,7 +2,6 @@ package com.huanchengfly.tieba.post.ui.page.hottopic.list
 
 import android.graphics.Typeface
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -49,12 +48,12 @@ import com.huanchengfly.tieba.post.ui.common.theme.compose.White
 import com.huanchengfly.tieba.post.ui.common.theme.compose.Yellow
 import com.huanchengfly.tieba.post.ui.common.theme.compose.pullRefreshIndicator
 import com.huanchengfly.tieba.post.ui.page.destinations.TopicDetailPageDestination
-import com.huanchengfly.tieba.post.ui.page.destinations.TopicDetailPageDestination.invoke
 import com.huanchengfly.tieba.post.ui.widgets.compose.BackNavigationIcon
 import com.huanchengfly.tieba.post.ui.widgets.compose.MyLazyColumn
 import com.huanchengfly.tieba.post.ui.widgets.compose.NetworkImage
 import com.huanchengfly.tieba.post.ui.widgets.compose.Sizes
 import com.huanchengfly.tieba.post.ui.widgets.compose.TitleCentredToolbar
+import com.huanchengfly.tieba.post.ui.widgets.compose.debounceClickable
 import com.huanchengfly.tieba.post.utils.StringUtil.getShortNumString
 import com.ramcosta.composedestinations.annotation.Destination
 import com.ramcosta.composedestinations.navigation.DestinationsNavigator
@@ -211,9 +210,9 @@ fun HotTopicListPage(
                     if (index < 3) {
                         Column(
                             modifier = Modifier.fillMaxWidth()
-                                .clickable {
+                                .debounceClickable(onClick =  {
                                     navigator.navigate(TopicDetailPageDestination(item.topic_id, item.topic_name))
-                                },
+                                }),
                             verticalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
                             TopicImage(index = index, imageUri = item.topic_image)
@@ -222,9 +221,9 @@ fun HotTopicListPage(
                     } else {
                         Row(
                             modifier = Modifier.fillMaxWidth()
-                                .clickable {
+                                .debounceClickable(onClick =  {
                                     navigator.navigate(TopicDetailPageDestination(item.topic_id, item.topic_name))
-                                },
+                                }),
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(8.dp),
                         ) {

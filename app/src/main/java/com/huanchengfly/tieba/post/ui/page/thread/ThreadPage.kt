@@ -161,6 +161,7 @@ import com.huanchengfly.tieba.post.ui.widgets.compose.UserHeader
 import com.huanchengfly.tieba.post.ui.widgets.compose.VerticalDivider
 import com.huanchengfly.tieba.post.ui.widgets.compose.VerticalGrid
 import com.huanchengfly.tieba.post.ui.widgets.compose.buildChipInlineContent
+import com.huanchengfly.tieba.post.ui.widgets.compose.debounceClickable
 import com.huanchengfly.tieba.post.ui.widgets.compose.rememberDialogState
 import com.huanchengfly.tieba.post.ui.widgets.compose.rememberMenuState
 import com.huanchengfly.tieba.post.ui.widgets.compose.states.StateScreen
@@ -214,14 +215,14 @@ fun PostAgreeBtn(
         label = "postAgreeBtnColor"
     )
     Button(
-        onClick = onClick,
+        onClick = {},
         shape = RoundedCornerShape(4.dp),
         contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
         colors = ButtonDefaults.buttonColors(
             backgroundColor = ExtendedTheme.colors.background,
             contentColor = animatedColor
         ),
-        modifier = modifier
+        modifier = modifier.debounceClickable(onClick = onClick)
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
@@ -256,14 +257,14 @@ private fun BottomBarAgreeBtn(
     val animatedColor by animateColorAsState(color, label = "agreeBtnColor")
 
     Button(
-        onClick = onClick,
+        onClick = {},
         shape = RoundedCornerShape(0),
         contentPadding = PaddingValues(horizontal = 4.dp),
         colors = ButtonDefaults.buttonColors(
             backgroundColor = ExtendedTheme.colors.bottomBar,
             contentColor = animatedColor
         ),
-        modifier = modifier
+        modifier = modifier.debounceClickable(onClick = onClick)
     ) {
         Row(
             modifier = Modifier.align(Alignment.CenterVertically),
@@ -1390,14 +1391,14 @@ fun ThreadPage(
                                                                 .padding(bottom = 16.dp)
                                                                 .clip(RoundedCornerShape(6.dp))
                                                                 .background(ExtendedTheme.colors.floorCard)
-                                                                .clickable {
+                                                                .debounceClickable(onClick = {
                                                                     navigator.navigate(
                                                                         ThreadPageDestination(
                                                                             threadId = it.get { tid.toLong() },
                                                                             forumId = it.get { fid },
                                                                         )
                                                                     )
-                                                                }
+                                                                })
                                                                 .padding(16.dp)
                                                         )
                                                     }
@@ -1438,22 +1439,21 @@ fun ThreadPage(
                                                     text = stringResource(R.string.text_all),
                                                     modifier = Modifier
                                                         .padding(horizontal = 8.dp)
-                                                        .clickable(
+                                                        .debounceClickable(
                                                             interactionSource = remember { MutableInteractionSource() },
-                                                            indication = null,
-                                                            enabled = isSeeLz
-                                                        ) {
-                                                            if (isSeeLz) {
-                                                                viewModel.send(
-                                                                    ThreadUiIntent.LoadFirstPage(
-                                                                        threadId = threadId,
-                                                                        forumId = forumId,
-                                                                        seeLz = false,
-                                                                        sortType = curSortType
+                                                            enabled = isSeeLz,
+                                                            onClick = {
+                                                                if (isSeeLz) {
+                                                                    viewModel.send(
+                                                                        ThreadUiIntent.LoadFirstPage(
+                                                                            threadId = threadId,
+                                                                            forumId = forumId,
+                                                                            seeLz = false,
+                                                                            sortType = curSortType
+                                                                        )
                                                                     )
-                                                                )
-                                                            }
-                                                        },
+                                                                }
+                                                            }),
                                                     fontSize = 13.sp,
                                                     fontWeight = if (!isSeeLz) FontWeight.SemiBold else FontWeight.Normal,
                                                     color = if (!isSeeLz) ExtendedTheme.colors.text else ExtendedTheme.colors.textSecondary,
@@ -1463,22 +1463,22 @@ fun ThreadPage(
                                                     text = stringResource(R.string.title_see_lz),
                                                     modifier = Modifier
                                                         .padding(horizontal = 8.dp)
-                                                        .clickable(
+                                                        .debounceClickable(
                                                             interactionSource = remember { MutableInteractionSource() },
-                                                            indication = null,
-                                                            enabled = !isSeeLz
-                                                        ) {
-                                                            if (!isSeeLz) {
-                                                                viewModel.send(
-                                                                    ThreadUiIntent.LoadFirstPage(
-                                                                        threadId = threadId,
-                                                                        forumId = forumId,
-                                                                        seeLz = true,
-                                                                        sortType = curSortType
-                                                                    )
-                                                                )
-                                                            }
-                                                        },
+                                                            enabled = !isSeeLz,
+                                                            onClick =
+                                                                {
+                                                                    if (!isSeeLz) {
+                                                                        viewModel.send(
+                                                                            ThreadUiIntent.LoadFirstPage(
+                                                                                threadId = threadId,
+                                                                                forumId = forumId,
+                                                                                seeLz = true,
+                                                                                sortType = curSortType
+                                                                            )
+                                                                        )
+                                                                    }
+                                                                }),
                                                     fontSize = 13.sp,
                                                     fontWeight = if (isSeeLz) FontWeight.SemiBold else FontWeight.Normal,
                                                     color = if (isSeeLz) ExtendedTheme.colors.text else ExtendedTheme.colors.textSecondary,
@@ -1496,7 +1496,7 @@ fun ThreadPage(
                                             Row(
                                                 modifier = Modifier
                                                     .fillMaxWidth()
-                                                    .clickable {
+                                                    .debounceClickable(onClick = {
                                                         viewModel.send(
                                                             ThreadUiIntent.LoadPrevious(
                                                                 threadId,
@@ -1511,7 +1511,7 @@ fun ThreadPage(
                                                                 postIds = data.map { it.post.get { id } }
                                                             )
                                                         )
-                                                    }
+                                                    })
                                                     .padding(8.dp),
                                                 horizontalArrangement = Arrangement.Center,
                                                 verticalAlignment = Alignment.CenterVertically
@@ -1612,7 +1612,7 @@ private fun TopBar(
                             .height(IntrinsicSize.Min)
                             .clip(RoundedCornerShape(100))
                             .background(ExtendedTheme.colors.chip)
-                            .clickable(onClick = onForumClick)
+                            .debounceClickable(onClick = onForumClick)
                             .padding(4.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
@@ -1679,7 +1679,7 @@ private fun BottomBar(
                         .weight(1f)
                         .clip(RoundedCornerShape(6.dp))
                         .background(ExtendedTheme.colors.bottomBarSurface)
-                        .clickable(onClick = onClickReply)
+                        .debounceClickable(onClick = onClickReply)
                         .padding(8.dp),
                 ) {
                     Text(
@@ -1689,9 +1689,11 @@ private fun BottomBar(
                     )
                 }
             } else {
-                Spacer(modifier = Modifier
-                    .weight(1f)
-                    .height(40.dp))
+                Spacer(
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(40.dp)
+                )
             }
 
             BottomBarAgreeBtn(
@@ -1704,7 +1706,7 @@ private fun BottomBar(
             Box(
                 modifier = Modifier
                     .fillMaxHeight()
-                    .clickable(onClick = onClickMore)
+                    .debounceClickable(onClick = onClickMore)
                     .padding(horizontal = 4.dp),
                 contentAlignment = Alignment.Center
             ) {
@@ -1976,9 +1978,7 @@ fun PostCard(
                                     modifier = Modifier
                                         .fillMaxWidth()
                                         .padding(top = 2.dp)
-                                        .clickable {
-                                            onOpenSubPosts(0)
-                                        }
+                                        .debounceClickable(onClick = { onOpenSubPosts(0) })
                                         .padding(horizontal = 12.dp)
                                 )
                             }

@@ -165,7 +165,7 @@ fun ActionItem(
     onClick: () -> Unit
 ) {
     ProvideContentColor(color = ExtendedTheme.colors.onTopBar) {
-        IconButton(onClick = onClick) {
+        IconButton(onClick = {}, modifier = Modifier.debounceClickable(onClick = onClick)) {
             Icon(
                 imageVector = icon,
                 contentDescription = contentDescription

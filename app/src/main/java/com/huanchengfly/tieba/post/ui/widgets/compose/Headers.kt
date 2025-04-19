@@ -65,9 +65,8 @@ fun UserHeader(
     content: @Composable (RowScope.() -> Unit)? = null,
 ) {
     val clickableModifier = if (onClick != null) {
-        Modifier.clickable(
+        Modifier.debounceClickable(
             interactionSource = remember { MutableInteractionSource() },
-            indication = null,
             onClick = onClick,
         )
     } else Modifier

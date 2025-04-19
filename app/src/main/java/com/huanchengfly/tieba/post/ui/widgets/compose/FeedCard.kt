@@ -75,12 +75,10 @@ import com.huanchengfly.tieba.post.api.models.protos.SimpleForum
 import com.huanchengfly.tieba.post.api.models.protos.ThreadInfo
 import com.huanchengfly.tieba.post.api.models.protos.User
 import com.huanchengfly.tieba.post.api.models.protos.VideoInfo
-import com.huanchengfly.tieba.post.api.models.ThreadInfoBean
 import com.huanchengfly.tieba.post.api.models.protos.abstractText
 import com.huanchengfly.tieba.post.api.models.protos.renders
 import com.huanchengfly.tieba.post.arch.BaseComposeActivity.Companion.LocalWindowSizeClass
 import com.huanchengfly.tieba.post.arch.ImmutableHolder
-import com.huanchengfly.tieba.post.arch.getOrNull
 import com.huanchengfly.tieba.post.arch.wrapImmutable
 import com.huanchengfly.tieba.post.findActivity
 import com.huanchengfly.tieba.post.goToActivity
@@ -215,7 +213,7 @@ fun Card(
     onClick: (() -> Unit)? = null,
     contentPadding: PaddingValues = PaddingValues(horizontal = 16.dp),
 ) {
-    val cardModifier = if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier
+    val cardModifier = if (onClick != null) Modifier.debounceClickable(onClick = onClick) else Modifier
 
     val paddingModifier = if (action != null) Modifier.padding(top = 16.dp)
     else Modifier.padding(vertical = 16.dp)
@@ -374,7 +372,7 @@ fun ForumInfoChip(
             .height(IntrinsicSize.Min)
             .clip(RoundedCornerShape(4.dp))
             .background(color = ExtendedTheme.colors.chip)
-            .clickable(onClick = onClick)
+            .debounceClickable(onClick = onClick)
             .padding(4.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -795,9 +793,9 @@ fun FeedCard(
                         modifier = Modifier
                             .clip(RoundedCornerShape(6.dp))
                             .background(ExtendedTheme.colors.floorCard)
-                            .clickable {
+                            .debounceClickable(onClick = {
                                 onClickOriginThread(it.get())
-                            }
+                            })
                             .padding(16.dp)
                     )
                 }
@@ -948,9 +946,9 @@ fun FeedCard(
                         modifier = Modifier
                             .clip(RoundedCornerShape(6.dp))
                             .background(ExtendedTheme.colors.floorCard)
-                            .clickable {
+                            .debounceClickable(onClick = {
                                 onClickOriginThread(it.get())
-                            }
+                            })
                             .padding(16.dp)
                     )
                 }
@@ -1019,7 +1017,7 @@ private fun ActionBtn(
     color: Color = LocalContentColor.current,
     onClick: (() -> Unit)? = null,
 ) {
-    val clickableModifier = if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier
+    val clickableModifier = if (onClick != null) Modifier.debounceClickable(onClick = onClick) else Modifier
     Row(
         modifier = clickableModifier
             .padding(vertical = 16.dp)

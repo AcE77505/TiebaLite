@@ -1,7 +1,6 @@
 package com.huanchengfly.tieba.post.ui.page.main.notifications.list
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -44,6 +43,7 @@ import com.huanchengfly.tieba.post.ui.widgets.compose.LoadMoreLayout
 import com.huanchengfly.tieba.post.ui.widgets.compose.MyLazyColumn
 import com.huanchengfly.tieba.post.ui.widgets.compose.Sizes
 import com.huanchengfly.tieba.post.ui.widgets.compose.UserHeader
+import com.huanchengfly.tieba.post.ui.widgets.compose.debounceClickable
 import com.huanchengfly.tieba.post.utils.DateTimeUtils
 import com.huanchengfly.tieba.post.utils.StringUtil
 import kotlinx.collections.immutable.persistentListOf
@@ -120,7 +120,7 @@ fun NotificationsListPage(
                         ) {
                             Column(
                                 modifier = Modifier
-                                    .clickable {
+                                    .debounceClickable(onClick =  {
                                         if (info.isFloor == "1") {
                                             navigator.navigate(
                                                 SubPostsPageDestination(
@@ -138,7 +138,7 @@ fun NotificationsListPage(
                                                 )
                                             )
                                         }
-                                    }
+                                    })
                                     .padding(horizontal = 16.dp, vertical = 12.dp),
                                 verticalArrangement = Arrangement.spacedBy(8.dp)
                             ) {
@@ -189,7 +189,7 @@ fun NotificationsListPage(
                                         modifier = Modifier
                                             .fillMaxWidth()
                                             .clip(RoundedCornerShape(6.dp))
-                                            .clickable {
+                                            .debounceClickable(onClick =  {
                                                 if (info.isFloor == "1") {
                                                     navigator.navigate(
                                                         SubPostsPageDestination(
@@ -207,7 +207,7 @@ fun NotificationsListPage(
                                                         )
                                                     )
                                                 }
-                                            }
+                                            })
                                             .background(
                                                 ExtendedTheme.colors.chip,
                                                 RoundedCornerShape(6.dp)

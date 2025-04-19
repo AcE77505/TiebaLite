@@ -6,7 +6,6 @@ import android.graphics.Typeface
 import android.net.Uri
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -105,8 +104,6 @@ import com.huanchengfly.tieba.post.ui.page.destinations.ForumSearchPostPageDesti
 import com.huanchengfly.tieba.post.ui.page.destinations.ReplyPageDestination
 import com.huanchengfly.tieba.post.ui.page.forum.threadlist.ForumThreadListPage
 import com.huanchengfly.tieba.post.ui.page.forum.threadlist.ForumThreadListUiEvent
-import com.huanchengfly.tieba.post.ui.page.thread.ThreadSortType
-import com.huanchengfly.tieba.post.ui.page.thread.ThreadUiIntent
 import com.huanchengfly.tieba.post.ui.widgets.compose.Avatar
 import com.huanchengfly.tieba.post.ui.widgets.compose.AvatarPlaceholder
 import com.huanchengfly.tieba.post.ui.widgets.compose.BackNavigationIcon
@@ -123,6 +120,7 @@ import com.huanchengfly.tieba.post.ui.widgets.compose.ScrollableTabRow
 import com.huanchengfly.tieba.post.ui.widgets.compose.Sizes
 import com.huanchengfly.tieba.post.ui.widgets.compose.TabClickMenu
 import com.huanchengfly.tieba.post.ui.widgets.compose.Toolbar
+import com.huanchengfly.tieba.post.ui.widgets.compose.debounceClickable
 import com.huanchengfly.tieba.post.ui.widgets.compose.picker.ListSinglePicker
 import com.huanchengfly.tieba.post.ui.widgets.compose.rememberDialogState
 import com.huanchengfly.tieba.post.ui.widgets.compose.rememberMenuState
@@ -136,7 +134,6 @@ import com.huanchengfly.tieba.post.utils.requestPinShortcut
 import com.ramcosta.composedestinations.annotation.DeepLink
 import com.ramcosta.composedestinations.annotation.Destination
 import com.ramcosta.composedestinations.navigation.DestinationsNavigator
-import com.squareup.wire.internal.equals
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -237,9 +234,8 @@ private fun ForumHeader(
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(4.dp),
-                    modifier = Modifier.clickable(
+                    modifier = Modifier.debounceClickable(
                         interactionSource = remember { MutableInteractionSource() },
-                        indication = null,
                         onClick = onOpenForumInfo
                     )
                 ) {
@@ -1037,9 +1033,10 @@ private fun ForumToolbar(
         actions = {
             if (forumId != null) {
                 IconButton(
-                    onClick = {
+                    onClick = {},
+                    modifier = Modifier.debounceClickable(onClick = {
                         navigator.navigate(ForumSearchPostPageDestination(forumName, forumId))
-                    }
+                    })
                 ) {
                     Icon(
                         imageVector = Icons.Rounded.Search,
