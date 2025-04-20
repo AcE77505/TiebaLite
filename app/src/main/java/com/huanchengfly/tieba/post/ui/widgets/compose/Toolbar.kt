@@ -34,8 +34,11 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -56,6 +59,8 @@ import com.huanchengfly.tieba.post.arch.emitGlobalEvent
 import com.huanchengfly.tieba.post.ui.common.theme.compose.ExtendedTheme
 import com.huanchengfly.tieba.post.ui.common.windowsizeclass.WindowWidthSizeClass.Companion.Compact
 import com.huanchengfly.tieba.post.ui.page.LocalNavigator
+import com.huanchengfly.tieba.post.ui.page.destinations.ForumSearchPostPageDestination
+import com.huanchengfly.tieba.post.ui.page.destinations.ForumSearchPostPageDestination.invoke
 import com.huanchengfly.tieba.post.ui.page.destinations.LoginPageDestination
 import com.huanchengfly.tieba.post.utils.AccountUtil
 import com.huanchengfly.tieba.post.utils.AccountUtil.LocalAccount
@@ -164,8 +169,16 @@ fun ActionItem(
     contentDescription: String,
     onClick: () -> Unit
 ) {
+    var lastClickTime by remember { mutableLongStateOf(0L) }
     ProvideContentColor(color = ExtendedTheme.colors.onTopBar) {
-        IconButton(onClick = {}, modifier = Modifier.debounceClickable(onClick = onClick)) {
+        IconButton(onClick = {
+            val currentTime = System.currentTimeMillis()
+            val delayMillis = 500L
+            if (currentTime - lastClickTime >= delayMillis) {
+                onClick()
+            }
+            lastClickTime = currentTime
+        }) {
             Icon(
                 imageVector = icon,
                 contentDescription = contentDescription

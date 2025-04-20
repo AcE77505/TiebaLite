@@ -81,9 +81,9 @@ fun ClickMenu(
                     onClick = {
                         val currentTime = System.currentTimeMillis()
                         if (currentTime - lastClickTime >= clickableInterval) {
-                            lastClickTime = currentTime
                             menuState.expanded = true
                         }
+                        lastClickTime = currentTime
                     }
                 )
         ) {
@@ -149,9 +149,9 @@ fun LongClickMenu(
             ) {
                 val currentTime = System.currentTimeMillis()
                 if (currentTime - lastClickTime >= clickableInterval) {
-                    lastClickTime = currentTime
                     onClick?.invoke()
                 }
+                lastClickTime = currentTime
             }
     ) {
         content()

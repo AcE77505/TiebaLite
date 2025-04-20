@@ -215,14 +215,14 @@ fun PostAgreeBtn(
         label = "postAgreeBtnColor"
     )
     Button(
-        onClick = {},
+        onClick = onClick,
         shape = RoundedCornerShape(4.dp),
         contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
         colors = ButtonDefaults.buttonColors(
             backgroundColor = ExtendedTheme.colors.background,
             contentColor = animatedColor
         ),
-        modifier = modifier.debounceClickable(onClick = onClick)
+        modifier = modifier
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
@@ -257,14 +257,14 @@ private fun BottomBarAgreeBtn(
     val animatedColor by animateColorAsState(color, label = "agreeBtnColor")
 
     Button(
-        onClick = {},
+        onClick = onClick,
         shape = RoundedCornerShape(0),
         contentPadding = PaddingValues(horizontal = 4.dp),
         colors = ButtonDefaults.buttonColors(
             backgroundColor = ExtendedTheme.colors.bottomBar,
             contentColor = animatedColor
         ),
-        modifier = modifier.debounceClickable(onClick = onClick)
+        modifier = modifier
     ) {
         Row(
             modifier = Modifier.align(Alignment.CenterVertically),

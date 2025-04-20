@@ -785,14 +785,11 @@ fun EmptyScreen(
         actions = {
             if (!loggedIn) {
                 Button(
-                    onClick = {},
+                    onClick = {
+                        navigator.navigate(LoginPageDestination)
+                    },
                     modifier = Modifier
                         .fillMaxWidth()
-                        .debounceClickable(
-                            onClick = {
-                                navigator.navigate(LoginPageDestination)
-                            }
-                        )
                 ) {
                     Text(text = stringResource(id = R.string.button_login))
                 }

@@ -36,8 +36,8 @@ fun Modifier.debounceClickable(
     ) {
         val currentTime = System.currentTimeMillis()
         if (currentTime - lastClickTime >= delayMillis) {
-            lastClickTime = currentTime
             onClick()
         }
+        lastClickTime = currentTime
     }
 }

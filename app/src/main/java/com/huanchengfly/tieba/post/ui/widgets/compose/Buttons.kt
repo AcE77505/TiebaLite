@@ -50,7 +50,7 @@ fun Button(
     Surface(
         modifier = Modifier
             .clip(shape)
-            .clickable(
+            .debounceClickable(
                 onClick = onClick,
                 enabled = enabled,
                 interactionSource = interactionSource,

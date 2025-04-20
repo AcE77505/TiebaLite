@@ -51,6 +51,7 @@ import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -1032,11 +1033,16 @@ private fun ForumToolbar(
         },
         actions = {
             if (forumId != null) {
+                var lastClickTime by remember { mutableLongStateOf(0L) }
                 IconButton(
-                    onClick = {},
-                    modifier = Modifier.debounceClickable(onClick = {
-                        navigator.navigate(ForumSearchPostPageDestination(forumName, forumId))
-                    })
+                    onClick = {
+                        val currentTime = System.currentTimeMillis()
+                        val delayMillis = 500L
+                        if (currentTime - lastClickTime >= delayMillis) {
+                            navigator.navigate(ForumSearchPostPageDestination(forumName, forumId))
+                        }
+                        lastClickTime = currentTime
+                    }
                 ) {
                     Icon(
                         imageVector = Icons.Rounded.Search,
