@@ -52,6 +52,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
@@ -77,6 +78,8 @@ import com.huanchengfly.tieba.post.arch.emitGlobalEvent
 import com.huanchengfly.tieba.post.arch.getOrNull
 import com.huanchengfly.tieba.post.arch.pageViewModel
 import com.huanchengfly.tieba.post.goToActivity
+import com.huanchengfly.tieba.post.models.PhotoViewData
+import com.huanchengfly.tieba.post.models.PicItem
 import com.huanchengfly.tieba.post.models.database.Block
 import com.huanchengfly.tieba.post.toastShort
 import com.huanchengfly.tieba.post.ui.common.theme.compose.ExtendedTheme
@@ -94,6 +97,7 @@ import com.huanchengfly.tieba.post.ui.widgets.compose.ErrorScreen
 import com.huanchengfly.tieba.post.ui.widgets.compose.LazyLoad
 import com.huanchengfly.tieba.post.ui.widgets.compose.LazyLoadHorizontalPager
 import com.huanchengfly.tieba.post.ui.widgets.compose.MyScaffold
+import com.huanchengfly.tieba.post.ui.widgets.compose.NetworkImage
 import com.huanchengfly.tieba.post.ui.widgets.compose.PagerTabIndicator
 import com.huanchengfly.tieba.post.ui.widgets.compose.ProvideContentColor
 import com.huanchengfly.tieba.post.ui.widgets.compose.PullToRefreshLayout
@@ -783,12 +787,40 @@ private fun UserProfileDetail(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            Avatar(
-                data = StringUtil.getBigAvatarUrl(user.get { portrait }),
-                size = 96.dp,
-                contentDescription = null,
-                modifier = Modifier.padding(bottom = 16.dp)
-            )
+//            Avatar(
+//                data = StringUtil.getBigAvatarUrl(user.get { portrait }),
+//                size = 96.dp,
+//                contentDescription = null,
+//                modifier = Modifier.padding(bottom = 16.dp)
+//            )
+            Box(
+                modifier = Modifier
+                    .padding(bottom = 16.dp)
+                    .size(96.dp)
+                    .clip(CircleShape)
+            ) {
+                val imageUri = StringUtil.getBigAvatarUrl(user.get { portrait })
+                NetworkImage(
+                    imageUri = imageUri,
+                    contentDescription = null,
+                    modifier = Modifier.fillMaxSize(),
+                    //构造PhotoViewData复用NetworkImage，实现头像查看和下载
+                    photoViewData = PhotoViewData(
+                        picItems = listOf(
+                            PicItem(
+                                picId = "0",
+                                picIndex = 0,
+                                url = imageUri,
+                                originUrl = imageUri,
+                                showOriginBtn = false,
+                                originSize = 960
+                            )
+                        ),
+                        index = 0,
+                    ),
+                    enablePreview = true
+                )
+            }
             Spacer(modifier = Modifier.weight(1f))
             if (showBtn) {
                 Button(

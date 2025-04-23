@@ -237,6 +237,7 @@ private fun ForumHeader(
                     horizontalArrangement = Arrangement.spacedBy(4.dp),
                     modifier = Modifier.debounceClickable(
                         interactionSource = remember { MutableInteractionSource() },
+                        indication = null,
                         onClick = onOpenForumInfo
                     )
                 ) {

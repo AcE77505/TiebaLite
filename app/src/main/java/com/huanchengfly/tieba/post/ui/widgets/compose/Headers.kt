@@ -67,6 +67,7 @@ fun UserHeader(
     val clickableModifier = if (onClick != null) {
         Modifier.debounceClickable(
             interactionSource = remember { MutableInteractionSource() },
+            indication = null,
             onClick = onClick,
         )
     } else Modifier

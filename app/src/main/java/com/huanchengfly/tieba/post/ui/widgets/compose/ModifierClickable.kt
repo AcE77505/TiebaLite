@@ -20,7 +20,7 @@ fun Modifier.debounceClickable(
     delayMillis: Long = 500L,
     onClick: () -> Unit,
     interactionSource: MutableInteractionSource = MutableInteractionSource(),
-    indication: Indication = LocalIndication.current,
+    indication: Indication?,
     enabled: Boolean = true,
     role: Role? = null,
 ): Modifier = composed {
@@ -33,6 +33,27 @@ fun Modifier.debounceClickable(
             null
         else
             indication
+    ) {
+        val currentTime = System.currentTimeMillis()
+        if (currentTime - lastClickTime >= delayMillis) {
+            onClick()
+        }
+        lastClickTime = currentTime
+    }
+}
+
+
+@Composable
+fun Modifier.debounceClickable(
+    delayMillis: Long = 500L,
+    onClick: () -> Unit,
+    enabled: Boolean = true,
+    role: Role? = null,
+): Modifier = composed {
+    var lastClickTime by remember { mutableLongStateOf(0L) }
+    clickable(
+        enabled = enabled,
+        role = role
     ) {
         val currentTime = System.currentTimeMillis()
         if (currentTime - lastClickTime >= delayMillis) {

@@ -1441,6 +1441,7 @@ fun ThreadPage(
                                                         .padding(horizontal = 8.dp)
                                                         .debounceClickable(
                                                             interactionSource = remember { MutableInteractionSource() },
+                                                            indication = null,
                                                             enabled = isSeeLz,
                                                             onClick = {
                                                                 if (isSeeLz) {
@@ -1466,6 +1467,7 @@ fun ThreadPage(
                                                         .debounceClickable(
                                                             interactionSource = remember { MutableInteractionSource() },
                                                             enabled = !isSeeLz,
+                                                            indication = null,
                                                             onClick =
                                                                 {
                                                                     if (!isSeeLz) {
