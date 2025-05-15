@@ -38,6 +38,7 @@ import androidx.compose.material.icons.rounded.PhotoLibrary
 import androidx.compose.material.icons.rounded.PhotoSizeSelectActual
 import androidx.compose.material.icons.rounded.SwapCalls
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.movableContentOf
 import androidx.compose.runtime.remember
@@ -213,7 +214,8 @@ fun Card(
     onClick: (() -> Unit)? = null,
     contentPadding: PaddingValues = PaddingValues(horizontal = 16.dp),
 ) {
-    val cardModifier = if (onClick != null) Modifier.debounceClickable(onClick = onClick) else Modifier
+    val cardModifier =
+        if (onClick != null) Modifier.debounceClickable(onClick = onClick) else Modifier
 
     val paddingModifier = if (action != null) Modifier.padding(top = 16.dp)
     else Modifier.padding(vertical = 16.dp)
@@ -856,7 +858,7 @@ fun FeedCard(
         },
         content = {
             ThreadContent(
-                title =item.get{threadInfo.title!!},
+                title = item.get { threadInfo.title!! },
                 abstractText = item.get { threadInfo.abstractText },
                 showTitle = item.get { threadInfo.title?.isNotBlank() == true },
                 showAbstract = item.get { threadInfo.abstractText.isNotBlank() },
@@ -1017,7 +1019,8 @@ private fun ActionBtn(
     color: Color = LocalContentColor.current,
     onClick: (() -> Unit)? = null,
 ) {
-    val clickableModifier = if (onClick != null) Modifier.debounceClickable(onClick = onClick) else Modifier
+    val clickableModifier =
+        if (onClick != null) Modifier.debounceClickable(onClick = onClick) else Modifier
     Row(
         modifier = clickableModifier
             .padding(vertical = 16.dp)
@@ -1064,7 +1067,6 @@ fun VideoPlayer(
             }
         }
     )
-
     val fullScreen by (videoPlayerController as DefaultVideoPlayerController).collect { isFullScreen }
     val videoPlayerContent =
         movableContentOf { isFullScreen: Boolean, playerModifier: Modifier ->
@@ -1080,16 +1082,28 @@ fun VideoPlayer(
             modifier = modifier
         )
         FullScreen {
-            videoPlayerContent(
-                true,
-                Modifier.fillMaxSize()
-            )
+            DisposableEffect(
+                videoPlayerContent(
+                    true,
+                    Modifier.fillMaxSize()
+                )
+            ) {
+                onDispose {
+                    videoPlayerController.release()
+                }
+            }
         }
     } else {
-        videoPlayerContent(
-            false,
-            modifier
-        )
+        DisposableEffect(
+            videoPlayerContent(
+                false,
+                modifier
+            )
+        ) {
+            onDispose {
+                videoPlayerController.release()
+            }
+        }
     }
 }
 
