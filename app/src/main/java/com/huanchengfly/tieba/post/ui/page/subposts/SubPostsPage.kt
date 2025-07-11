@@ -234,7 +234,7 @@ internal fun SubPostsContent(
                         forumId = forum?.get { id } ?: forumId,
                         forumName = forum?.get { name }.orEmpty(),
                         threadId = threadId,
-                        postId = postId,
+                        postId = post?.get { id } ?: postId,
                         deleteMyPost = isSelfPost,
                         tbs = anti?.get { tbs } ?: account?.tbs,
                     )
@@ -248,7 +248,7 @@ internal fun SubPostsContent(
                         forumId = forum?.get { id } ?: forumId,
                         forumName = forum?.get { name }.orEmpty(),
                         threadId = threadId,
-                        postId = postId,
+                        postId = post?.get { id } ?: postId,
                         subPostId = deleteSubPost!!.get { id },
                         deleteMyPost = isSelfSubPost,
                         tbs = anti?.get { tbs } ?: account?.tbs,
@@ -325,7 +325,7 @@ internal fun SubPostsContent(
                                     ThreadPageDestination(
                                         forumId = forum?.get { id } ?: forumId,
                                         threadId = threadId,
-                                        postId = postId
+                                        postId = post?.get { id } ?: postId
                                     )
                                 )
                             }) {
@@ -448,7 +448,7 @@ internal fun SubPostsContent(
                                             SubPostsUiIntent.Agree(
                                                 forumId,
                                                 threadId,
-                                                postId,
+                                                post?.get { id } ?: postId,
                                                 agree = !hasAgreed
                                             )
                                         )
@@ -516,7 +516,7 @@ internal fun SubPostsContent(
                                     SubPostsUiIntent.Agree(
                                         forumId,
                                         threadId,
-                                        postId,
+                                        post?.get { id } ?: postId,
                                         subPostId = it.id,
                                         agree = !hasAgreed
                                     )
