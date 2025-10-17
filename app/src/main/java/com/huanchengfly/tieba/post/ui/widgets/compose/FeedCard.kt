@@ -880,20 +880,20 @@ fun FeedCard(
         action = {
             Row(modifier = Modifier.fillMaxWidth()) {
                 ThreadShareBtn(
-                    shareNum = item.get { threadInfo.shareNum }.toLong(),
+                    shareNum = item.get { threadInfo.shareNum }.toString(),
                     onClick = {},
                     modifier = Modifier.weight(1f)
                 )
 
                 ThreadReplyBtn(
-                    replyNum = item.get { threadInfo.replyNum },
+                    replyNum = item.get { threadInfo.replyNum }.toString(),
                     onClick = { onClickReply(item.get()) },
                     modifier = Modifier.weight(1f)
                 )
 
                 ThreadAgreeBtn(
                     hasAgree = item.get { threadInfo.agree.hasAgree == 1 },
-                    agreeNum = item.get { threadInfo.agreeNum },
+                    agreeNum = item.get { threadInfo.agreeNum }.toString(),
                     onClick = { onAgree(item.get()) },
                     modifier = Modifier.weight(1f)
                 )
