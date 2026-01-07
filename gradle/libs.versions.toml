@@ -189,7 +189,7 @@ xx-permissions = { group = "com.github.getActivity", name = "XXPermissions", ver
 com-gyf-immersionbar-immersionbar = { group = "com.gyf.immersionbar", name = "immersionbar", version = "3.0.0" }
 
 # UCrop
-com-github-yalantis-ucrop = { group = "com.github.yalantis", name = "ucrop", version = "2.2.11-native" }
+com-github-yalantis-ucrop = { group = "com.github.yalantis", name = "ucrop", version = "2.2.11" }
 
 # ButterKnife
 com-jakewharton-butterknife = { group = "com.jakewharton", name = "butterknife", version = "10.2.3" }
