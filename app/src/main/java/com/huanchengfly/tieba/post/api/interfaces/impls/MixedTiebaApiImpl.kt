@@ -25,6 +25,7 @@ import com.huanchengfly.tieba.post.api.models.FollowBean
 import com.huanchengfly.tieba.post.api.models.ForumPageBean
 import com.huanchengfly.tieba.post.api.models.ForumRecommend
 import com.huanchengfly.tieba.post.api.models.GetForumListBean
+import com.huanchengfly.tieba.post.api.models.GetUserBlackInfoBean
 import com.huanchengfly.tieba.post.api.models.InitNickNameBean
 import com.huanchengfly.tieba.post.api.models.LikeForumResultBean
 import com.huanchengfly.tieba.post.api.models.LoginBean
@@ -32,6 +33,7 @@ import com.huanchengfly.tieba.post.api.models.MSignBean
 import com.huanchengfly.tieba.post.api.models.MessageListBean
 import com.huanchengfly.tieba.post.api.models.MsgBean
 import com.huanchengfly.tieba.post.api.models.NewCollectDataBean
+import com.huanchengfly.tieba.post.api.models.PermissionListBean
 import com.huanchengfly.tieba.post.api.models.PersonalizedBean
 import com.huanchengfly.tieba.post.api.models.PicPageBean
 import com.huanchengfly.tieba.post.api.models.Profile
@@ -1537,5 +1539,23 @@ object MixedTiebaApiImpl : ITiebaApi {
             title,
             isHide,
             isTitle
+        )
+
+    override fun setUserBlack(
+        blackUid: Long,
+        tbs: String,
+        permList: PermissionListBean
+    ): Flow<CommonResponse> =
+        RetrofitTiebaApi.OFFICIAL_TIEBA_API.setUserBlack(
+            blackUid,
+            tbs,
+            permList.toJson()
+        )
+
+    override fun getUserBlackInfo(
+        blackUid: Long
+    ): Flow<GetUserBlackInfoBean>  =
+        RetrofitTiebaApi.OFFICIAL_TIEBA_API.getUserBlack(
+            blackUid
         )
 }
