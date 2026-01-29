@@ -113,7 +113,7 @@ class UserProfileViewModel @Inject constructor() :
 
         private fun UserProfileUiIntent.SetUserBlack.producePartialChange(): Flow<UserProfilePartialChange.PermListChange> =
             TiebaApi.getInstance()
-                .setUserBlack(uid, tbs, permList)
+                .setUserBlackFlow(uid, tbs, permList)
                 .map<CommonResponse, UserProfilePartialChange.PermListChange> {
                         UserProfilePartialChange.PermListChange.Success(this.permList)
                 }
@@ -122,7 +122,7 @@ class UserProfileViewModel @Inject constructor() :
 
         private fun UserProfileUiIntent.GetUserBlackInfo.producePartialChange(): Flow<UserProfilePartialChange.PermListChange> =
             TiebaApi.getInstance()
-                .getUserBlackInfo(uid)
+                .getUserBlackInfoFlow(uid)
                 .map<GetUserBlackInfoBean, UserProfilePartialChange.PermListChange> {
                     UserProfilePartialChange.PermListChange.Success(it.permList!!)
                 }

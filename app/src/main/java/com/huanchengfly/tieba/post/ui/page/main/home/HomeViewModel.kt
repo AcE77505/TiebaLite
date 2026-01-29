@@ -71,33 +71,34 @@ class HomeViewModel : BaseViewModel<HomeUiIntent, HomePartialChange, HomeUiState
 
         @Suppress("USELESS_CAST")
         private fun produceRefreshPartialChangeFlow(): Flow<HomePartialChange.Refresh> =
-            HistoryUtil.getFlow(HistoryUtil.TYPE_FORUM, 0)
-                .zip(
-                    TiebaApi.getInstance().forumGuideNewFlow()
-                ) { historyForums, forumRecommend ->
-                    val forums = forumRecommend.data_?.like_forum?.map {
-                        HomeUiState.Forum(
-                            it.avatar,
-                            it.forum_id.toString(),
-                            it.forum_name,
-                            it.is_sign == 1,
-                            it.level_id.toString(),
-                            it.hot_num
-                        )
-                    } ?: emptyList()
+            HistoryUtil.getFlow(HistoryUtil.TYPE_FORUM, 0).zip(
+                TiebaApi.getInstance().allForumGuideFlow()
+            ) { historyForums, forumGuideBean ->
+                val allLikeForums = forumGuideBean.likeForum
 
-                    // 添加关注列表到全局缓存
-                    FollowedForumsCache.update(forums.map { it.forumId.toLong() })
-
-                    val topForums = mutableListOf<HomeUiState.Forum>()
-                    val topForumsDB = LitePal.findAll(TopForum::class.java).map { it.forumId }
-                    topForums.addAll(forums.filter { topForumsDB.contains(it.forumId) })
-                    HomePartialChange.Refresh.Success(
-                        forums,
-                        topForums,
-                        historyForums
-                    ) as HomePartialChange.Refresh
+                // 转换 UI 实体
+                val forums = allLikeForums.map {
+                    HomeUiState.Forum(
+                        it.avatar,
+                        it.forumId.toString(),
+                        it.forumName,
+                        it.isSign == 1,
+                        it.levelId.toString(),
+                        it.hotNum
+                    )
                 }
+
+                // 全局缓存更新
+                FollowedForumsCache.updateAll(allLikeForums)
+
+                val topForumsDB = LitePal.findAll(TopForum::class.java).map { it.forumId }.toSet()
+                val topForums = forums.filter { it.forumId in topForumsDB }
+                HomePartialChange.Refresh.Success(
+                    forums,
+                    topForums,
+                    historyForums
+                ) as HomePartialChange.Refresh
+            }
                 .onStart { emit(HomePartialChange.Refresh.Start) }
                 .catch { emit(HomePartialChange.Refresh.Failure(it)) }
 
