@@ -145,7 +145,12 @@ class OKSignService : IntentService(TAG), CoroutineScope, ProgressListener {
         }
         val notification = buildNotification(title, text)
             .build()
-        notification.flags = notification.flags.addFlag(NotificationCompat.FLAG_ONGOING_EVENT)
+
+        if (isUnique == true) {
+            notification.flags = notification.flags and NotificationCompat.FLAG_ONGOING_EVENT.inv()
+        } else {
+            notification.flags = notification.flags or NotificationCompat.FLAG_ONGOING_EVENT
+        }
         notificationManager.notify(
             if (isUnique == true) System.currentTimeMillis().toInt() else NOTIFICATION_ID,
             notification
