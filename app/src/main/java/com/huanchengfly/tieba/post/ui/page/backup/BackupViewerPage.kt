@@ -79,6 +79,11 @@ fun BackupViewerPage(
                     item {
                         PostCard(
                             post = postData,
+                            onUserClick = {
+                                navigator.navigateDebounced(
+                                    Destination.UserProfile(user = postData.author)
+                                )
+                            },
                             onMenuCopyClick = { navigator.navigateDebounced(Destination.CopyText(it)) },
                         )
                     }
