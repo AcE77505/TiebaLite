@@ -37,6 +37,7 @@ import com.huanchengfly.tieba.post.ui.common.LocalAnimatedVisibilityScope
 import com.huanchengfly.tieba.post.ui.common.LocalSharedTransitionScope
 import com.huanchengfly.tieba.post.ui.page.Destination.Companion.navTypeOf
 import com.huanchengfly.tieba.post.ui.page.dialogs.CopyTextDialogPage
+import com.huanchengfly.tieba.post.ui.page.backup.BackupPage
 import com.huanchengfly.tieba.post.ui.page.forum.ForumPage
 import com.huanchengfly.tieba.post.ui.page.forum.detail.ForumDetailPage
 import com.huanchengfly.tieba.post.ui.page.forum.rule.ForumRuleDetailPage
@@ -174,6 +175,10 @@ private fun buildRootNavGraph(
             deepLinks = listOf(navDeepLink<Destination.ThreadStore>(basePath = "$TB_LITE_DOMAIN://favorite"))
         ) {
             ThreadStorePage(navController)
+        }
+
+        animatedComposable<Destination.BackupManagement> {
+            BackupPage(navigator = navController)
         }
 
         animatedComposable<Destination.SubPosts> { backStackEntry ->

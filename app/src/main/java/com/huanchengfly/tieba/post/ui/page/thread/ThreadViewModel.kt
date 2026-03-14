@@ -26,6 +26,9 @@ import com.huanchengfly.tieba.post.arch.BaseStateViewModel
 import com.huanchengfly.tieba.post.arch.CommonUiEvent
 import com.huanchengfly.tieba.post.arch.TbLiteExceptionHandler
 import com.huanchengfly.tieba.post.arch.UiEvent
+import com.huanchengfly.tieba.post.backup.BackupContentItem
+import com.huanchengfly.tieba.post.backup.BackupData
+import com.huanchengfly.tieba.post.backup.BackupRepository
 import com.huanchengfly.tieba.post.components.ClipBoardLinkDetector
 import com.huanchengfly.tieba.post.models.database.ThreadHistory
 import com.huanchengfly.tieba.post.repository.HistoryRepository
@@ -34,7 +37,10 @@ import com.huanchengfly.tieba.post.repository.PbPageRepository
 import com.huanchengfly.tieba.post.repository.PbPageUiResponse
 import com.huanchengfly.tieba.post.repository.ThreadStoreRepository
 import com.huanchengfly.tieba.post.repository.user.SettingsRepository
+import com.huanchengfly.tieba.post.ui.common.PbContentRender
 import com.huanchengfly.tieba.post.ui.common.PbContentRender.Companion.TAG_LZ
+import com.huanchengfly.tieba.post.ui.common.PicContentRender
+import com.huanchengfly.tieba.post.ui.common.VideoContentRender
 import com.huanchengfly.tieba.post.ui.models.PostData
 import com.huanchengfly.tieba.post.ui.models.SubPostItemData
 import com.huanchengfly.tieba.post.ui.page.Destination
@@ -76,6 +82,7 @@ class ThreadViewModel @Inject constructor(
     private val historyRepo: HistoryRepository,
     private val storeRepo: ThreadStoreRepository,
     private val threadRepo: PbPageRepository,
+    private val backupRepo: BackupRepository,
     settingsRepository: SettingsRepository,
     savedStateHandle: SavedStateHandle
 ) : BaseStateViewModel<ThreadUiState>() {
@@ -579,6 +586,105 @@ class ThreadViewModel @Inject constructor(
         ClipBoardLinkDetector.onCopyTiebaLink(link)
     }
 
+    /**
+     * Backup data extracted from the current loaded state, held temporarily while the user
+     * decides what to do about a duplicate.
+     */
+    private var pendingBackupData: BackupData? = null
+
+    /**
+     * Initiates the backup flow:
+     * - If no backup path is configured → emits [ThreadUiEvent.BackupPathNotSet]
+     * - If a backup for this thread already exists → saves [pendingBackupData] and emits
+     *   [ThreadUiEvent.BackupDuplicateExists] so the UI can show a choice dialog
+     * - Otherwise performs the backup immediately
+     */
+    fun onBackupThread() {
+        val state = currentState
+        val forum = state.forum ?: return
+        val thread = state.thread ?: return
+        val firstPost = state.firstPost ?: return
+        val author = firstPost.author
+
+        val contentItems = firstPost.contentRenders.mapNotNull { render ->
+            when (render) {
+                is PicContentRender -> BackupContentItem.Image(
+                    url = render.picUrl,
+                    originUrl = render.originUrl,
+                )
+                is VideoContentRender -> BackupContentItem.Video(
+                    videoUrl = render.videoUrl,
+                    coverUrl = render.picUrl,
+                    webUrl = render.webUrl,
+                )
+                else -> {
+                    val text = render.toString()
+                    if (text.isNotBlank() &&
+                        text != PbContentRender.MEDIA_PICTURE &&
+                        text != PbContentRender.MEDIA_VIDEO &&
+                        text != PbContentRender.MEDIA_VOICE
+                    ) {
+                        BackupContentItem.Text(text)
+                    } else null
+                }
+            }
+        }
+
+        val data = BackupData(
+            threadId = threadId,
+            backupTime = System.currentTimeMillis(),
+            forumId = forum.first,
+            forumName = forum.second,
+            forumAvatar = forum.third,
+            title = thread.title,
+            authorId = author.id,
+            authorName = author.nameShow.ifEmpty { author.name },
+            authorAvatar = author.avatarUrl,
+            contentItems = contentItems,
+        )
+
+        launchInVM {
+            val uriSet = backupRepo.backupUri.first() != null
+            if (!uriSet) {
+                sendUiEvent(ThreadUiEvent.BackupPathNotSet)
+                return@launchInVM
+            }
+            val exists = backupRepo.checkExists(threadId)
+            if (exists) {
+                pendingBackupData = data
+                sendUiEvent(ThreadUiEvent.BackupDuplicateExists)
+            } else {
+                doBackup(data, overwrite = false, keepBoth = false)
+            }
+        }
+    }
+
+    /**
+     * Called after the user has decided how to handle a duplicate backup:
+     * [overwrite] = true replaces the old file; [keepBoth] = true writes a new timestamped file.
+     * Passing both false (cancel) does nothing.
+     */
+    fun performBackup(overwrite: Boolean, keepBoth: Boolean) {
+        val data = pendingBackupData ?: return
+        pendingBackupData = null
+        if (!overwrite && !keepBoth) return
+        launchInVM { doBackup(data, overwrite = overwrite, keepBoth = keepBoth) }
+    }
+
+    private suspend fun doBackup(data: BackupData, overwrite: Boolean, keepBoth: Boolean) {
+        val success = runCatching {
+            backupRepo.saveBackup(data, overwrite = overwrite, keepBoth = keepBoth)
+        }.getOrElse { e ->
+            sendUiEvent(ThreadUiEvent.BackupFailed(e.localizedMessage ?: e.message ?: ""))
+            return
+        }
+        if (success) {
+            sendUiEvent(ThreadUiEvent.BackupSuccess)
+        } else {
+            sendUiEvent(ThreadUiEvent.BackupFailed(context.getString(R.string.title_backup_failed)))
+        }
+    }
+
     fun onReportThread(navigator: NavController) = viewModelScope.launch {
         TiebaUtil.reportPost(context, navigator, firstPostId.toString())
     }
@@ -750,4 +856,16 @@ sealed interface ThreadUiEvent : UiEvent {
     data class ToReplyDestination(val direction: Reply): ThreadUiEvent
 
     data class ToSubPostsDestination(val direction: SubPosts): ThreadUiEvent
+
+    /** Backup path not configured yet – UI should navigate to backup management */
+    object BackupPathNotSet : ThreadUiEvent
+
+    /** A backup for the current thread already exists – UI should show a choice dialog */
+    object BackupDuplicateExists : ThreadUiEvent
+
+    /** Backup completed successfully */
+    object BackupSuccess : ThreadUiEvent
+
+    /** Backup failed */
+    data class BackupFailed(val message: String) : ThreadUiEvent
 }

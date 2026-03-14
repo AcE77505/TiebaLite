@@ -32,6 +32,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ChromeReaderMode
 import androidx.compose.material.icons.automirrored.rounded.ChromeReaderMode
 import androidx.compose.material.icons.automirrored.rounded.Sort
+import androidx.compose.material.icons.rounded.Backup
 import androidx.compose.material.icons.rounded.ContentCopy
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.Face6
@@ -124,6 +125,7 @@ import com.huanchengfly.tieba.post.ui.models.PostData
 import com.huanchengfly.tieba.post.ui.models.SimpleForum
 import com.huanchengfly.tieba.post.ui.models.UserData
 import com.huanchengfly.tieba.post.ui.page.Destination.Forum
+import com.huanchengfly.tieba.post.ui.page.Destination.BackupManagement
 import com.huanchengfly.tieba.post.ui.page.ProvideNavigator
 import com.huanchengfly.tieba.post.ui.page.setResult
 import com.huanchengfly.tieba.post.ui.page.threadstore.ThreadStoreUiEvent
@@ -136,6 +138,7 @@ import com.huanchengfly.tieba.post.ui.widgets.compose.ConfirmDialog
 import com.huanchengfly.tieba.post.ui.widgets.compose.Container
 import com.huanchengfly.tieba.post.ui.widgets.compose.Dialog
 import com.huanchengfly.tieba.post.ui.widgets.compose.DialogNegativeButton
+import com.huanchengfly.tieba.post.ui.widgets.compose.DialogPositiveButton
 import com.huanchengfly.tieba.post.ui.widgets.compose.ListMenuItem
 import com.huanchengfly.tieba.post.ui.widgets.compose.LocalHazeState
 import com.huanchengfly.tieba.post.ui.widgets.compose.PlainTooltipBox
@@ -254,6 +257,8 @@ fun ThreadPage(
             .invokeOnCompletion { showBottomSheet = false }
     }
 
+    val backupDuplicateDialogState = rememberDialogState()
+
     viewModel.uiEvent.collectUiEventWithLifecycle {
         val message = when (it) {
             is CommonUiEvent.Toast -> it.message.toString()
@@ -293,6 +298,14 @@ fun ThreadPage(
             is ThreadUiEvent.ToReplyDestination -> navigator.navigateDebounced(it.direction)
 
             is ThreadUiEvent.ToSubPostsDestination -> navigator.navigateDebounced(it.direction)
+
+            is ThreadUiEvent.BackupPathNotSet -> navigator.navigateDebounced(BackupManagement)
+
+            is ThreadUiEvent.BackupDuplicateExists -> backupDuplicateDialogState.show()
+
+            is ThreadUiEvent.BackupSuccess -> getString(R.string.title_backup_success)
+
+            is ThreadUiEvent.BackupFailed -> getString(R.string.title_backup_failed)
 
             is ThreadLikeUiEvent -> it.toMessage(context)
 
@@ -351,6 +364,24 @@ fun ThreadPage(
             }
         }
     )
+
+    Dialog(
+        dialogState = backupDuplicateDialogState,
+        title = { Text(text = stringResource(id = R.string.title_backup_exists)) },
+        buttons = {
+            DialogNegativeButton(text = stringResource(id = R.string.button_cancel))
+            DialogPositiveButton(
+                text = stringResource(id = R.string.title_backup_keep_both),
+                onClick = { viewModel.performBackup(overwrite = false, keepBoth = true) }
+            )
+            DialogPositiveButton(
+                text = stringResource(id = R.string.title_backup_overwrite),
+                onClick = { viewModel.performBackup(overwrite = true, keepBoth = false) }
+            )
+        }
+    ) {
+        Text(text = stringResource(id = R.string.message_backup_exists))
+    }
 
     val onRefreshClicked: () -> Unit = {
         viewModel.requestLoad(0, postId)
@@ -548,6 +579,7 @@ fun ThreadPage(
                         },
                         onShareClick = viewModel::onShareThread,
                         onCopyLinkClick = viewModel::onCopyThreadLink,
+                        onBackupClick = viewModel::onBackupThread,
                         onReportClick = { viewModel.onReportThread(navigator) },
                         onDeleteClick = viewModel::onDeleteThread.takeIf { isMyThread },
                         requestCloseMenu = closeBottomSheet,
@@ -621,6 +653,7 @@ private fun ThreadMenu(
     onDescClick: () -> Unit,
     onShareClick: () -> Unit,
     onCopyLinkClick: () -> Unit,
+    onBackupClick: () -> Unit,
     onReportClick: () -> Unit,
     onDeleteClick: (() -> Unit)?,
     requestCloseMenu: () -> Unit,
@@ -709,6 +742,15 @@ private fun ThreadMenu(
                 onClick = {
                     requestCloseMenu()
                     onCopyLinkClick()
+                },
+                modifier = Modifier.fillMaxWidth(),
+            )
+            ListMenuItem(
+                icon = Icons.Rounded.Backup,
+                text = stringResource(id = R.string.title_backup),
+                onClick = {
+                    requestCloseMenu()
+                    onBackupClick()
                 },
                 modifier = Modifier.fillMaxWidth(),
             )

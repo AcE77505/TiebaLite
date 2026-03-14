@@ -73,6 +73,9 @@ sealed interface Destination {
     data object ThreadStore: Destination
 
     @Serializable
+    data object BackupManagement: Destination
+
+    @Serializable
     data class SubPosts(
         val threadId: Long,
         val forumId: Long = 0L,
