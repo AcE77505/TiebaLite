@@ -819,6 +819,7 @@ class ThreadViewModel @Inject constructor(
             authorName = author.nameShow.ifEmpty { author.name },
             authorAvatar = author.avatarUrl,
             contentItems = contentItems,
+            postTime = firstPost.time,
             replies = replies,
             // replyNum is the authoritative total from the server; may exceed replies.size when
             // some posts were removed for violations and therefore not fetchable.

@@ -150,7 +150,11 @@ private fun BackupItem(
 ) {
     val context = LocalContext.current
     val formattedTime = remember(backup.backupTime) {
-        DateTimeUtils.getRelativeTimeString(context, backup.backupTime)
+        DateTimeUtils.getRelativeTimeString(
+            context,
+            backup.backupTime,
+            minuteStringRes = R.string.relative_date_minute_backup,
+        )
     }
 
     LongClickMenu(

@@ -165,7 +165,7 @@ private fun BackupData.toPostData(imagesDir: File?): PostData {
         author = author,
         floor = 1,
         title = title,
-        time = backupTime,
+        time = postTime.takeIf { it > 0L } ?: backupTime,
         like = LikeZero,
         blocked = false,
         plainText = plainText,

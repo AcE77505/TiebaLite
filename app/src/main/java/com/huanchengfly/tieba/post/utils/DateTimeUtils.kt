@@ -1,6 +1,7 @@
 package com.huanchengfly.tieba.post.utils
 
 import android.content.Context
+import androidx.annotation.StringRes
 import com.huanchengfly.tieba.post.R
 import java.text.SimpleDateFormat
 import java.util.Calendar
@@ -22,7 +23,8 @@ object DateTimeUtils {
     @JvmStatic
     fun getRelativeTimeString(
         context: Context,
-        timestamp: Long
+        timestamp: Long,
+        @StringRes minuteStringRes: Int = R.string.relative_date_minute,
     ): String {
         val calendar = Calendar.getInstance().apply {
             timeInMillis = fixTimestamp(timestamp)
@@ -45,7 +47,7 @@ object DateTimeUtils {
                             }
                         } else {
                             context.getString(
-                                R.string.relative_date_minute,
+                                minuteStringRes,
                                 currentCalendar.get(Calendar.MINUTE) - calendar.get(Calendar.MINUTE)
                             )
                         }

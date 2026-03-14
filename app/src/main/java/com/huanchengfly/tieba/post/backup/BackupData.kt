@@ -13,10 +13,11 @@ import kotlinx.serialization.Serializable
  *      `{threadId}.zip` (or `{threadId}_{backupTime}.zip`) in the user-chosen SAF directory
  *  4 – added [replies] field containing all fetched post replies
  *  5 – added [replyNum] (total post count) and [likeCount] (total like/agree count)
+ *  6 – added [postTime] (original creation time of the first/楼主 post)
  */
 @Serializable
 data class BackupData(
-    val version: Int = 5,
+    val version: Int = 6,
     val threadId: Long,
     val backupTime: Long,
     val forumId: Long,
@@ -31,6 +32,8 @@ data class BackupData(
     /** Entry name inside the companion ZIP file for offline viewing. */
     val imageKeyAuthorAvatar: String? = null,
     val contentItems: List<BackupContentItem>,
+    /** Original creation time (Unix ms) of the first/楼主 post. Zero for v5 and earlier backups. */
+    val postTime: Long = 0L,
     /** All fetched replies (楼层 ≥ 2). May be a partial list if backup was cancelled. */
     val replies: List<BackupReply> = emptyList(),
     /**
