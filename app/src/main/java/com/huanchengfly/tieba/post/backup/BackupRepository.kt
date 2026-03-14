@@ -6,6 +6,7 @@ import android.provider.DocumentsContract
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
+import com.huanchengfly.tieba.post.utils.GlideUtil
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
@@ -13,6 +14,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
+import java.io.File
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -132,6 +134,7 @@ class BackupRepository @Inject constructor(
     /**
      * Delete a backup identified by [threadId] and [backupTime].
      * Returns true if deleted, false if not found.
+     * Also cleans up locally stored images when no other backup for the same thread remains.
      */
     suspend fun deleteBackup(threadId: Long, backupTime: Long): Boolean = withContext(Dispatchers.IO) {
         val treeUri = backupUri.first() ?: return@withContext false
@@ -152,11 +155,85 @@ class BackupRepository @Inject constructor(
                 if (displayName == "${threadId}.json" || displayName == "${threadId}_${backupTime}.json") {
                     val docId = cursor.getString(0)
                     val docUri = DocumentsContract.buildDocumentUriUsingTree(treeUri, docId)
-                    return@withContext DocumentsContract.deleteDocument(context.contentResolver, docUri)
+                    val deleted = DocumentsContract.deleteDocument(context.contentResolver, docUri)
+                    if (deleted && !hasAnyBackupForThread(treeUri, threadId)) {
+                        File(context.filesDir, backupImagesRelativePath(threadId)).deleteRecursively()
+                    }
+                    return@withContext deleted
                 }
             }
         }
         false
+    }
+
+    /**
+     * Find a [BackupData] for [threadId] by reading the backup JSON file (if it exists).
+     * Returns null when no backup is found or the directory is not configured.
+     */
+    suspend fun getBackupByThreadId(threadId: Long): BackupData? = withContext(Dispatchers.IO) {
+        val treeUri = backupUri.first() ?: return@withContext null
+        val existingUri = findExactBackupUri(treeUri, threadId) ?: return@withContext null
+        runCatching {
+            context.contentResolver.openInputStream(existingUri)?.use { stream ->
+                json.decodeFromString<BackupData>(stream.bufferedReader().readText())
+            }
+        }.getOrNull()
+    }
+
+    /**
+     * Returns the app-internal directory where locally cached images for [threadId] are stored.
+     * The directory is created if it does not yet exist.
+     */
+    fun localImagesDir(threadId: Long): File =
+        File(context.filesDir, backupImagesRelativePath(threadId)).also { it.mkdirs() }
+
+    /**
+     * Downloads all images referenced in [data] (forumAvatar, authorAvatar, content images/videos)
+     * to the app-internal backup-images directory and returns a copy of [data] with the local
+     * file names populated.  Individual download failures are silently ignored so that a partial
+     * set of local images is still useful.
+     */
+    suspend fun downloadAndStoreImages(data: BackupData): BackupData = withContext(Dispatchers.IO) {
+        val dir = File(context.filesDir, data.localImagesRelativePath()).also { it.mkdirs() }
+
+        val localForumAvatar = data.forumAvatar
+            ?.takeIf { it.isNotBlank() }
+            ?.let { url -> runCatching { downloadToFile(url, File(dir, "forum_avatar")) }.getOrNull() }
+
+        val localAuthorAvatar = data.authorAvatar
+            .takeIf { it.isNotBlank() }
+            ?.let { url -> runCatching { downloadToFile(url, File(dir, "author_avatar")) }.getOrNull() }
+
+        val updatedItems = data.contentItems.mapIndexed { index, item ->
+            when (item) {
+                is BackupContentItem.Image -> {
+                    val localUrl = item.url.takeIf { it.isNotBlank() }?.let { url ->
+                        runCatching { downloadToFile(url, File(dir, "img_$index")) }.getOrNull()
+                    }
+                    val localOriginUrl = when {
+                        item.originUrl.isBlank() -> localUrl
+                        item.originUrl == item.url -> localUrl
+                        else -> runCatching {
+                            downloadToFile(item.originUrl, File(dir, "img_${index}_origin"))
+                        }.getOrNull() ?: localUrl
+                    }
+                    item.copy(localUrl = localUrl, localOriginUrl = localOriginUrl)
+                }
+                is BackupContentItem.Video -> {
+                    val localCoverUrl = item.coverUrl.takeIf { it.isNotBlank() }?.let { url ->
+                        runCatching { downloadToFile(url, File(dir, "vid_${index}_cover")) }.getOrNull()
+                    }
+                    item.copy(localCoverUrl = localCoverUrl)
+                }
+                else -> item
+            }
+        }
+
+        data.copy(
+            localForumAvatar = localForumAvatar,
+            localAuthorAvatar = localAuthorAvatar,
+            contentItems = updatedItems,
+        )
     }
 
     // ── helpers ──────────────────────────────────────────────────────────────
@@ -193,5 +270,32 @@ class BackupRepository @Inject constructor(
         context.contentResolver.openOutputStream(newDocUri)?.use { os ->
             os.write(bytes)
         }
+    }
+
+    /**
+     * Downloads [url] and copies the result to [destFile].
+     * Returns [destFile]'s name (filename only) on success, or throws on failure.
+     */
+    private suspend fun downloadToFile(url: String, destFile: File): String {
+        val cached = GlideUtil.downloadCancelable(context, url, null)
+        cached.copyTo(destFile, overwrite = true)
+        return destFile.name
+    }
+
+    /** Returns true if any backup JSON file for [threadId] still exists in [treeUri]. */
+    private fun hasAnyBackupForThread(treeUri: Uri, threadId: Long): Boolean {
+        val treeDocId = DocumentsContract.getTreeDocumentId(treeUri)
+        val childrenUri = DocumentsContract.buildChildDocumentsUriUsingTree(treeUri, treeDocId)
+        context.contentResolver.query(
+            childrenUri,
+            arrayOf(DocumentsContract.Document.COLUMN_DISPLAY_NAME),
+            null, null, null
+        )?.use { cursor ->
+            while (cursor.moveToNext()) {
+                val name = cursor.getString(0)
+                if (name.startsWith("$threadId") && name.endsWith(".json")) return true
+            }
+        }
+        return false
     }
 }

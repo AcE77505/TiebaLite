@@ -34,6 +34,7 @@
     <string name="message_backup_delete_confirm">确定要删除该备份吗？</string>
     <string name="title_backup_forum">所在吧：%1$s</string>
     <string name="tip_backup_author_time">作者：%1$s · %2$s</string>
+    <string name="tip_video_offline">视频需联网查看</string>
     <string name="toast_copy_success">已复制到剪贴板</string>
     <string name="title_share">分享</string>
     <string name="title_history">浏览记录</string>

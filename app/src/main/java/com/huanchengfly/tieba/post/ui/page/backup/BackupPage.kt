@@ -155,7 +155,7 @@ fun BackupPage(
                         },
                         onOpenClick = {
                             navigator.navigateDebounced(
-                                Destination.Thread(threadId = backup.threadId)
+                                Destination.BackupViewer(threadId = backup.threadId)
                             )
                         },
                     )

@@ -38,6 +38,7 @@ import com.huanchengfly.tieba.post.ui.common.LocalSharedTransitionScope
 import com.huanchengfly.tieba.post.ui.page.Destination.Companion.navTypeOf
 import com.huanchengfly.tieba.post.ui.page.dialogs.CopyTextDialogPage
 import com.huanchengfly.tieba.post.ui.page.backup.BackupPage
+import com.huanchengfly.tieba.post.ui.page.backup.BackupViewerPage
 import com.huanchengfly.tieba.post.ui.page.forum.ForumPage
 import com.huanchengfly.tieba.post.ui.page.forum.detail.ForumDetailPage
 import com.huanchengfly.tieba.post.ui.page.forum.rule.ForumRuleDetailPage
@@ -179,6 +180,10 @@ private fun buildRootNavGraph(
 
         animatedComposable<Destination.BackupManagement> {
             BackupPage(navigator = navController)
+        }
+
+        animatedComposable<Destination.BackupViewer> {
+            BackupViewerPage(navigator = navController)
         }
 
         animatedComposable<Destination.SubPosts> { backStackEntry ->

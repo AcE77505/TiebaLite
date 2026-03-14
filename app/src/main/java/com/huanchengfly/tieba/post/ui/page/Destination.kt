@@ -76,6 +76,9 @@ sealed interface Destination {
     data object BackupManagement: Destination
 
     @Serializable
+    data class BackupViewer(val threadId: Long) : Destination
+
+    @Serializable
     data class SubPosts(
         val threadId: Long,
         val forumId: Long = 0L,
