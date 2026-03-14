@@ -1,8 +1,5 @@
 package com.huanchengfly.tieba.post.ui.page.backup
 
-import android.net.Uri
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -10,8 +7,8 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.Backup
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -22,6 +19,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -34,6 +32,7 @@ import com.huanchengfly.tieba.post.arch.collectUiEventWithLifecycle
 import com.huanchengfly.tieba.post.backup.BackupData
 import com.huanchengfly.tieba.post.navigateDebounced
 import com.huanchengfly.tieba.post.ui.page.Destination
+import com.huanchengfly.tieba.post.ui.page.settings.SettingsDestination
 import com.huanchengfly.tieba.post.ui.widgets.compose.BackNavigationIcon
 import com.huanchengfly.tieba.post.ui.widgets.compose.ConfirmDialog
 import com.huanchengfly.tieba.post.ui.widgets.compose.LongClickMenu
@@ -50,33 +49,9 @@ fun BackupPage(
     navigator: NavController,
     viewModel: BackupViewModel = hiltViewModel(),
 ) {
-    val context = LocalContext.current
     val snackbarHostState = rememberSnackbarHostState()
 
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    val backupUri by viewModel.backupUri.collectAsStateWithLifecycle()
-
-    // SAF directory picker launcher
-    val dirPickerLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.OpenDocumentTree()
-    ) { uri: Uri? ->
-        if (uri != null) {
-            viewModel.setBackupUri(uri)
-        }
-    }
-
-    // Show "set backup path" dialog if no path is set yet
-    val setPathDialogState = rememberDialogState()
-    if (backupUri == null) {
-        ConfirmDialog(
-            dialogState = setPathDialogState,
-            onConfirm = { dirPickerLauncher.launch(null) },
-            confirmText = stringResource(id = R.string.title_set_backup_path),
-            title = { Text(text = stringResource(id = R.string.title_set_backup_path)) },
-        ) {
-            Text(text = stringResource(id = R.string.message_set_backup_path))
-        }
-    }
 
     // Delete confirmation dialog
     var backupToDelete by remember { mutableStateOf<BackupData?>(null) }
@@ -115,11 +90,12 @@ fun BackupPage(
                     BackNavigationIcon(onBackPressed = navigator::navigateUp)
                 },
                 actions = {
-                    // Change backup path button
-                    androidx.compose.material3.IconButton(onClick = { dirPickerLauncher.launch(null) }) {
-                        androidx.compose.material3.Icon(
-                            imageVector = Icons.Rounded.Backup,
-                            contentDescription = stringResource(id = R.string.title_set_backup_path)
+                    IconButton(onClick = {
+                        navigator.navigateDebounced(SettingsDestination.BackupSettings)
+                    }) {
+                        Icon(
+                            painter = painterResource(id = R.drawable.ic_settings_24),
+                            contentDescription = stringResource(id = R.string.title_backup_settings)
                         )
                     }
                 }
@@ -161,13 +137,6 @@ fun BackupPage(
                     )
                 }
             }
-        }
-    }
-
-    // Prompt user to set path on first entry
-    if (backupUri == null) {
-        androidx.compose.runtime.LaunchedEffect(Unit) {
-            setPathDialogState.show()
         }
     }
 }
@@ -229,3 +198,4 @@ private fun BackupItem(
         }
     }
 }
+

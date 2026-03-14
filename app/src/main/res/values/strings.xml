@@ -32,6 +32,13 @@
     <string name="title_backup_delete_confirm">删除备份</string>
     <string name="action_delete_backup">删除</string>
     <string name="message_backup_delete_confirm">确定要删除该备份吗？</string>
+    <string name="title_backup_settings">备份设置</string>
+    <string name="summary_backup_settings">备份路径、备份回复时间间隔</string>
+    <string name="summary_backup_path_set">已设置</string>
+    <string name="summary_backup_path_not_set">未设置</string>
+    <string name="title_backup_reply_interval">备份回复时间间隔</string>
+    <string name="summary_backup_reply_interval">%1$d ms</string>
+    <string name="message_backup_reply_interval">每次获取回复之间的时间间隔，单位为ms，最小值为500</string>
     <string name="forum">吧</string>
     <string name="tip_backup_author_time">作者：%1$s · %2$s</string>
     <string name="tip_video_offline">视频需联网查看</string>

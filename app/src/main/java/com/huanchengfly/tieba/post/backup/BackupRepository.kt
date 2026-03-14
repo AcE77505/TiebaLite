@@ -4,6 +4,7 @@ import android.content.Context
 import android.net.Uri
 import android.provider.DocumentsContract
 import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import com.huanchengfly.tieba.post.utils.GlideUtil
@@ -26,6 +27,7 @@ import javax.inject.Singleton
 private val Context.backupDataStore by preferencesDataStore(name = "backup_prefs")
 
 private val BACKUP_URI_KEY = stringPreferencesKey("backup_uri")
+private val BACKUP_REPLY_INTERVAL_KEY = longPreferencesKey("backup_reply_interval")
 
 @Singleton
 class BackupRepository @Inject constructor(
@@ -42,6 +44,10 @@ class BackupRepository @Inject constructor(
     val backupUri: Flow<Uri?> = context.backupDataStore.data
         .map { prefs -> prefs[BACKUP_URI_KEY]?.let { Uri.parse(it) } }
 
+    /** Flow of the reply fetch interval in milliseconds (default: [DEFAULT_REPLY_FETCH_INTERVAL]). */
+    val replyFetchInterval: Flow<Long> = context.backupDataStore.data
+        .map { prefs -> prefs[BACKUP_REPLY_INTERVAL_KEY] ?: DEFAULT_REPLY_FETCH_INTERVAL }
+
     /** Persist the backup directory URI and request persistent permissions. */
     suspend fun setBackupUri(uri: Uri) {
         context.contentResolver.takePersistableUriPermission(
@@ -50,6 +56,12 @@ class BackupRepository @Inject constructor(
                     android.content.Intent.FLAG_GRANT_WRITE_URI_PERMISSION
         )
         context.backupDataStore.edit { it[BACKUP_URI_KEY] = uri.toString() }
+    }
+
+    /** Persist the reply fetch interval. [interval] must be ≥ [MIN_REPLY_FETCH_INTERVAL]. */
+    suspend fun setReplyFetchInterval(interval: Long) {
+        require(interval >= MIN_REPLY_FETCH_INTERVAL)
+        context.backupDataStore.edit { it[BACKUP_REPLY_INTERVAL_KEY] = interval }
     }
 
     /**
@@ -426,4 +438,9 @@ class BackupRepository @Inject constructor(
     /** Returns the viewer cache directory for [threadId] (may not yet exist). */
     private fun viewerCacheDir(threadId: Long) =
         File(context.cacheDir, "backup_viewer/$threadId")
+
+    companion object {
+        const val DEFAULT_REPLY_FETCH_INTERVAL = 1500L
+        const val MIN_REPLY_FETCH_INTERVAL = 500L
+    }
 }

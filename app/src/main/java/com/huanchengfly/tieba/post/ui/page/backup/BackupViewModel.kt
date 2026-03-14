@@ -1,7 +1,6 @@
 package com.huanchengfly.tieba.post.ui.page.backup
 
 import android.content.Context
-import android.net.Uri
 import androidx.lifecycle.viewModelScope
 import com.huanchengfly.tieba.post.R
 import com.huanchengfly.tieba.post.arch.BaseStateViewModel
@@ -11,11 +10,7 @@ import com.huanchengfly.tieba.post.backup.BackupData
 import com.huanchengfly.tieba.post.backup.BackupRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
-import kotlinx.coroutines.flow.SharingStarted
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
-import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 data class BackupUiState(
@@ -36,10 +31,6 @@ class BackupViewModel @Inject constructor(
 
     override fun createInitialState(): BackupUiState = BackupUiState()
 
-    /** Flow of the persisted backup directory URI */
-    val backupUri: StateFlow<Uri?> = backupRepository.backupUri
-        .stateIn(viewModelScope, SharingStarted.Eagerly, null)
-
     init {
         loadBackups()
     }
@@ -52,13 +43,6 @@ class BackupViewModel @Inject constructor(
         }
     }
 
-    fun setBackupUri(uri: Uri) {
-        viewModelScope.launch {
-            backupRepository.setBackupUri(uri)
-            loadBackups()
-        }
-    }
-
     fun deleteBackup(backup: BackupData) {
         launchInVM {
             backupRepository.deleteBackup(backup.threadId, backup.backupTime)
@@ -67,3 +51,4 @@ class BackupViewModel @Inject constructor(
         }
     }
 }
+
