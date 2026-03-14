@@ -16,6 +16,7 @@ import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
 import java.io.ByteArrayOutputStream
 import java.io.File
+import java.util.zip.CRC32
 import java.util.zip.ZipEntry
 import java.util.zip.ZipInputStream
 import java.util.zip.ZipOutputStream
@@ -324,9 +325,19 @@ class BackupRepository @Inject constructor(
 
         val zipBytes = ByteArrayOutputStream().also { baos ->
             ZipOutputStream(baos).use { zip ->
+                // Use STORED (no compression) to avoid the CPU cost of DEFLATE.
+                zip.setMethod(ZipOutputStream.STORED)
                 for ((key, file) in imageEntries) {
-                    zip.putNextEntry(ZipEntry(key))
-                    file.inputStream().use { it.copyTo(zip) }
+                    val bytes = file.readBytes()
+                    val crc = CRC32().also { it.update(bytes) }.value
+                    val entry = ZipEntry(key).apply {
+                        method = ZipEntry.STORED
+                        size = bytes.size.toLong()
+                        compressedSize = bytes.size.toLong()
+                        this.crc = crc
+                    }
+                    zip.putNextEntry(entry)
+                    zip.write(bytes)
                     zip.closeEntry()
                 }
             }
