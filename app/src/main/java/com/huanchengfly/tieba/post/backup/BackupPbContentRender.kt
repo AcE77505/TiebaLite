@@ -22,6 +22,7 @@ import com.bumptech.glide.load.engine.GlideException
 import com.bumptech.glide.request.RequestListener
 import com.bumptech.glide.request.target.Target
 import com.huanchengfly.tieba.post.activities.VideoViewActivity
+import com.huanchengfly.tieba.post.models.PhotoViewData
 import com.huanchengfly.tieba.post.navigateDebounced
 import com.huanchengfly.tieba.post.ui.common.PbContentRender
 import com.huanchengfly.tieba.post.ui.common.windowsizeclass.isWindowWidthCompact
@@ -38,9 +39,15 @@ import java.io.File
  *
  * [model] is either a local [File] (extracted from the companion ZIP) or a remote URL [String].
  * Both are handled natively by Glide.
+ *
+ * [photoViewData] carries the full list of images in this post so that tapping opens the
+ * gallery at the correct position rather than a single-image "1 / 1" viewer.
  */
 @Immutable
-class BackupImageContentRender(val model: Any?) : PbContentRender {
+class BackupImageContentRender(
+    val model: Any?,
+    val photoViewData: PhotoViewData? = null,
+) : PbContentRender {
 
     @Composable
     override fun Render() {
@@ -83,16 +90,23 @@ class BackupImageContentRender(val model: Any?) : PbContentRender {
             modifier = Modifier
                 .pointerInput(m) {
                     detectTapGestures(onTap = {
-                        val url = when (m) {
-                            is File -> Uri.fromFile(m).toString()
-                            is String -> m
-                            else -> return@detectTapGestures
+                        val pvd = photoViewData
+                        if (pvd != null) {
+                            // Open the full gallery with all images; use useTbGlideUrl=false so
+                            // that both file:// URIs and plain https:// URLs are handled by Glide.
+                            PhotoViewActivity.launch(context, pvd, useTbGlideUrl = false)
+                        } else {
+                            val url = when (m) {
+                                is File -> Uri.fromFile(m).toString()
+                                is String -> m
+                                else -> return@detectTapGestures
+                            }
+                            PhotoViewActivity.launchSinglePhoto(
+                                context = context,
+                                url = url,
+                                useTbGlideUrl = m is String,
+                            )
                         }
-                        PhotoViewActivity.launchSinglePhoto(
-                            context = context,
-                            url = url,
-                            useTbGlideUrl = m is String,
-                        )
                     })
                 }
                 .clip(MaterialTheme.shapes.small)

@@ -216,9 +216,10 @@ class PhotoViewActivity : AppCompatActivity(), OverlayCustomizer, ViewerCallback
          * */
         const val EXTRA_LOAD_WITH_TB_GLIDE_URL = "com.huanchengfly.tieba.post.USE_TB_GLIDE_URL"
 
-        fun launch(context: Context, data: PhotoViewData) {
+        fun launch(context: Context, data: PhotoViewData, useTbGlideUrl: Boolean = true) {
             context.goToActivityDebounced<PhotoViewActivity> {
                 putExtra(EXTRA_PHOTO_VIEW_DATA, data)
+                putExtra(EXTRA_LOAD_WITH_TB_GLIDE_URL, useTbGlideUrl)
             }
         }
 

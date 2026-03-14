@@ -2,6 +2,7 @@ package com.huanchengfly.tieba.post.ui.page.backup
 
 import androidx.lifecycle.SavedStateHandle
 import androidx.navigation.toRoute
+import android.net.Uri
 import com.huanchengfly.tieba.post.arch.BaseStateViewModel
 import com.huanchengfly.tieba.post.arch.UiState
 import com.huanchengfly.tieba.post.backup.BackupContentItem
@@ -10,6 +11,8 @@ import com.huanchengfly.tieba.post.backup.BackupImageContentRender
 import com.huanchengfly.tieba.post.backup.BackupRepository
 import com.huanchengfly.tieba.post.backup.BackupVideoContentRender
 import com.huanchengfly.tieba.post.backup.imageKeyOrUrl
+import com.huanchengfly.tieba.post.models.PhotoViewData
+import com.huanchengfly.tieba.post.models.PicItem
 import com.huanchengfly.tieba.post.ui.common.PbContentRender
 import com.huanchengfly.tieba.post.ui.common.TextContentRender
 import com.huanchengfly.tieba.post.ui.models.LikeZero
@@ -98,17 +101,39 @@ private fun BackupData.toPostData(imagesDir: File?): PostData {
         isLz = true,
     )
 
+    // Build a PicItem list for all images in the post so the photo viewer can show the full
+    // gallery (correct "N / total" indicator and swipe-between-images).
+    val imageItems = contentItems.filterIsInstance<BackupContentItem.Image>()
+    val picItems: List<PicItem> = imageItems.mapIndexed { idx, item ->
+        val fallback = item.originUrl.takeIf { it.isNotBlank() } ?: item.url
+        val url = when (val m = imageKeyOrUrl(imagesDir, item.imageKey, fallback)) {
+            is File -> Uri.fromFile(m).toString()
+            is String -> m
+            else -> item.url
+        }
+        PicItem(picId = url, picIndex = idx + 1, originUrl = url)
+    }
+
+    var imageIdx = 0
     val renders: List<PbContentRender> = contentItems.map { item ->
         when (item) {
             is BackupContentItem.Text -> TextContentRender(item.content)
 
-            is BackupContentItem.Image -> BackupImageContentRender(
-                model = imageKeyOrUrl(
-                    imagesDir,
-                    item.imageKey,
-                    item.originUrl.takeIf { it.isNotBlank() } ?: item.url,
+            is BackupContentItem.Image -> {
+                val currentIdx = imageIdx++
+                BackupImageContentRender(
+                    model = imageKeyOrUrl(
+                        imagesDir,
+                        item.imageKey,
+                        item.originUrl.takeIf { it.isNotBlank() } ?: item.url,
+                    ),
+                    photoViewData = PhotoViewData(
+                        data = null,
+                        picItems = picItems,
+                        index = currentIdx,
+                    ).takeIf { picItems.isNotEmpty() },
                 )
-            )
+            }
 
             is BackupContentItem.Video -> BackupVideoContentRender(
                 coverModel = imageKeyOrUrl(imagesDir, item.imageKeyCover, item.coverUrl),
