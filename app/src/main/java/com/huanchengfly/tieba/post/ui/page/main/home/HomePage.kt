@@ -20,7 +20,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
@@ -311,12 +310,16 @@ private fun ForumItemContent(forum: LikedForum, showAvatar: Boolean) {
                 shape = CircleShape,
                 color = MaterialTheme.colorScheme.secondary,
             ) {
-                Text(
-                    text = forum.level,
-                    modifier = Modifier.fillMaxSize().wrapContentSize(Alignment.Center),
-                    fontSize = 11.sp,
-                    fontWeight = FontWeight.Bold
-                )
+                Box(
+                    contentAlignment = Alignment.Center,
+                    modifier = Modifier.fillMaxSize()
+                ) {
+                    Text(
+                        text = forum.level,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
             }
 
             if (forum.signed) {
