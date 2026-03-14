@@ -283,82 +283,42 @@ class BackupRepository @Inject constructor(
         // key → Glide-cached File
         val imageEntries = linkedMapOf<String, File>()
 
-        val imageKeyForumAvatar = data.forumAvatar?.takeIf { it.isNotBlank() }?.let { url ->
-            runCatching {
-                val key = "forum_avatar"
-                imageEntries[key] = GlideUtil.downloadCancelable(context, url, null)
-                key
-            }.getOrNull()
-        }
+        /** Downloads [url] into [imageEntries] under [key] and returns the key, or null on failure. */
+        suspend fun tryDownload(key: String, url: String?): String? =
+            url?.takeIf { it.isNotBlank() }?.let { u ->
+                runCatching {
+                    imageEntries[key] = GlideUtil.downloadCancelable(context, u, null)
+                    key
+                }.getOrNull()
+            }
 
-        val imageKeyAuthorAvatar = data.authorAvatar.takeIf { it.isNotBlank() }?.let { url ->
-            runCatching {
-                val key = "author_avatar"
-                imageEntries[key] = GlideUtil.downloadCancelable(context, url, null)
-                key
-            }.getOrNull()
-        }
+        val imageKeyForumAvatar = tryDownload("forum_avatar", data.forumAvatar)
+        val imageKeyAuthorAvatar = tryDownload("author_avatar", data.authorAvatar)
 
         val updatedItems = data.contentItems.mapIndexed { index, item ->
             when (item) {
                 is BackupContentItem.Image -> {
                     // Prefer the highest-quality URL; only one image per content item is stored.
                     val effectiveUrl = item.originUrl.takeIf { it.isNotBlank() } ?: item.url
-                    val imageKey = effectiveUrl.takeIf { it.isNotBlank() }?.let { url ->
-                        runCatching {
-                            val key = "img_$index"
-                            imageEntries[key] = GlideUtil.downloadCancelable(context, url, null)
-                            key
-                        }.getOrNull()
-                    }
-                    item.copy(imageKey = imageKey)
+                    item.copy(imageKey = tryDownload("img_$index", effectiveUrl))
                 }
-                is BackupContentItem.Video -> {
-                    val imageKeyCover = item.coverUrl.takeIf { it.isNotBlank() }?.let { url ->
-                        runCatching {
-                            val key = "vid_${index}_cover"
-                            imageEntries[key] = GlideUtil.downloadCancelable(context, url, null)
-                            key
-                        }.getOrNull()
-                    }
-                    item.copy(imageKeyCover = imageKeyCover)
-                }
+                is BackupContentItem.Video ->
+                    item.copy(imageKeyCover = tryDownload("vid_${index}_cover", item.coverUrl))
                 else -> item
             }
         }
 
         // Download reply author avatars and reply content images.
         val updatedReplies = data.replies.mapIndexed { replyIndex, reply ->
-            val replyAvatarKey = reply.authorAvatar.takeIf { it.isNotBlank() }?.let { url ->
-                runCatching {
-                    val key = "reply_${replyIndex}_author_avatar"
-                    imageEntries[key] = GlideUtil.downloadCancelable(context, url, null)
-                    key
-                }.getOrNull()
-            }
+            val replyAvatarKey = tryDownload("reply_${replyIndex}_author_avatar", reply.authorAvatar)
             val updatedReplyItems = reply.contentItems.mapIndexed { itemIndex, item ->
                 when (item) {
                     is BackupContentItem.Image -> {
                         val effectiveUrl = item.originUrl.takeIf { it.isNotBlank() } ?: item.url
-                        val imageKey = effectiveUrl.takeIf { it.isNotBlank() }?.let { url ->
-                            runCatching {
-                                val key = "reply_${replyIndex}_img_$itemIndex"
-                                imageEntries[key] = GlideUtil.downloadCancelable(context, url, null)
-                                key
-                            }.getOrNull()
-                        }
-                        item.copy(imageKey = imageKey)
+                        item.copy(imageKey = tryDownload("reply_${replyIndex}_img_$itemIndex", effectiveUrl))
                     }
-                    is BackupContentItem.Video -> {
-                        val imageKeyCover = item.coverUrl.takeIf { it.isNotBlank() }?.let { url ->
-                            runCatching {
-                                val key = "reply_${replyIndex}_vid_${itemIndex}_cover"
-                                imageEntries[key] = GlideUtil.downloadCancelable(context, url, null)
-                                key
-                            }.getOrNull()
-                        }
-                        item.copy(imageKeyCover = imageKeyCover)
-                    }
+                    is BackupContentItem.Video ->
+                        item.copy(imageKeyCover = tryDownload("reply_${replyIndex}_vid_${itemIndex}_cover", item.coverUrl))
                     else -> item
                 }
             }
