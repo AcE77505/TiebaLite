@@ -22,7 +22,7 @@ object DateTimeUtils {
     @JvmStatic
     fun getRelativeTimeString(
         context: Context,
-        timestamp: Long
+        timestamp: Long,
     ): String {
         val calendar = Calendar.getInstance().apply {
             timeInMillis = fixTimestamp(timestamp)
@@ -64,6 +64,15 @@ object DateTimeUtils {
         } else {
             calendar.format(context.getString(R.string.relative_date_after))
         }
+    }
+
+    /**
+     * Returns a backup-context time string: same as [getRelativeTimeString] but with "备份"
+     * appended to every possible format (e.g. "今天 21:15备份", "5 分钟前备份", "刚刚备份").
+     */
+    fun getBackupRelativeTimeString(context: Context, timestamp: Long): String {
+        return getRelativeTimeString(context, timestamp) +
+                context.getString(R.string.relative_date_backup_suffix)
     }
 
     fun getRelativeDayString(context: Context, timestamp: Long): String {

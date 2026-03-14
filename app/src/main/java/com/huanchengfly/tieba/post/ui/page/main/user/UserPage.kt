@@ -21,6 +21,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.material.icons.rounded.AccountCircle
+import androidx.compose.material.icons.rounded.Backup
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LocalContentColor
@@ -276,6 +277,9 @@ fun UserPage(viewModel: UserViewModel = viewModel()) {
                     onHistoryClicked = {
                         navigator.navigateDebounced(Destination.History)
                     },
+                    onBackupManagementClicked = {
+                        navigator.navigateDebounced(Destination.BackupManagement)
+                    },
                     onThemeClicked = { navigator.navigateDebounced(Destination.AppTheme) },
                     onServiceCenterClicked = {
                         navigator.navigateDebounced(
@@ -303,6 +307,7 @@ private fun UserMenu(
     modifier: Modifier = Modifier,
     onThreadStoreClicked: (() -> Unit)? = null,
     onHistoryClicked: () -> Unit,
+    onBackupManagementClicked: () -> Unit,
     onThemeClicked: () -> Unit,
     onServiceCenterClicked: (() -> Unit)? = null,
     onSettingsClicked: () -> Unit,
@@ -327,6 +332,12 @@ private fun UserMenu(
             icon = ImageVector.vectorResource(id = R.drawable.ic_outline_watch_later_24),
             text = stringResource(id = R.string.title_history),
             onClick = onHistoryClicked
+        )
+
+        ListMenuItem(
+            icon = Icons.Rounded.Backup,
+            text = stringResource(id = R.string.title_backup_management),
+            onClick = onBackupManagementClicked
         )
 
         ListMenuItem(
