@@ -39,6 +39,11 @@
     <string name="title_backup_reply_interval">备份回复时间间隔</string>
     <string name="summary_backup_reply_interval">%1$d ms</string>
     <string name="message_backup_reply_interval">每次获取回复之间的时间间隔，单位为ms，最小值为500</string>
+    <string name="title_backup_fetch_replies">正在备份回复</string>
+    <string name="message_backup_fetch_progress">已获取 %1$d / %2$d 页</string>
+    <string name="button_stop">停止</string>
+    <string name="title_cancel_backup_confirm">取消备份</string>
+    <string name="message_cancel_backup_confirm">确认取消获取回复？已获取的回复（%1$d 页）将被保留并写入文件。</string>
     <string name="forum">吧</string>
     <string name="tip_backup_author_time">作者：%1$s · %2$s</string>
     <string name="tip_video_offline">视频需联网查看</string>

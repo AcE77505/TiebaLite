@@ -327,10 +327,49 @@ class BackupRepository @Inject constructor(
             }
         }
 
+        // Download reply author avatars and reply content images.
+        val updatedReplies = data.replies.mapIndexed { replyIndex, reply ->
+            val replyAvatarKey = reply.authorAvatar.takeIf { it.isNotBlank() }?.let { url ->
+                runCatching {
+                    val key = "reply_${replyIndex}_author_avatar"
+                    imageEntries[key] = GlideUtil.downloadCancelable(context, url, null)
+                    key
+                }.getOrNull()
+            }
+            val updatedReplyItems = reply.contentItems.mapIndexed { itemIndex, item ->
+                when (item) {
+                    is BackupContentItem.Image -> {
+                        val effectiveUrl = item.originUrl.takeIf { it.isNotBlank() } ?: item.url
+                        val imageKey = effectiveUrl.takeIf { it.isNotBlank() }?.let { url ->
+                            runCatching {
+                                val key = "reply_${replyIndex}_img_$itemIndex"
+                                imageEntries[key] = GlideUtil.downloadCancelable(context, url, null)
+                                key
+                            }.getOrNull()
+                        }
+                        item.copy(imageKey = imageKey)
+                    }
+                    is BackupContentItem.Video -> {
+                        val imageKeyCover = item.coverUrl.takeIf { it.isNotBlank() }?.let { url ->
+                            runCatching {
+                                val key = "reply_${replyIndex}_vid_${itemIndex}_cover"
+                                imageEntries[key] = GlideUtil.downloadCancelable(context, url, null)
+                                key
+                            }.getOrNull()
+                        }
+                        item.copy(imageKeyCover = imageKeyCover)
+                    }
+                    else -> item
+                }
+            }
+            reply.copy(imageKeyAuthorAvatar = replyAvatarKey, contentItems = updatedReplyItems)
+        }
+
         val updatedData = data.copy(
             imageKeyForumAvatar = imageKeyForumAvatar,
             imageKeyAuthorAvatar = imageKeyAuthorAvatar,
             contentItems = updatedItems,
+            replies = updatedReplies,
         )
 
         if (imageEntries.isEmpty()) return updatedData to null

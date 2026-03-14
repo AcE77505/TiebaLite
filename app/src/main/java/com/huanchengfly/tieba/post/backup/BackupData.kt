@@ -11,10 +11,11 @@ import kotlinx.serialization.Serializable
  *  2 – added localForumAvatar / localAuthorAvatar / per-item local paths for offline viewing
  *  3 – replaced private-dir local paths with ZIP-entry image keys; images stored as
  *      `{threadId}.zip` (or `{threadId}_{backupTime}.zip`) in the user-chosen SAF directory
+ *  4 – added [replies] field containing all fetched post replies
  */
 @Serializable
 data class BackupData(
-    val version: Int = 3,
+    val version: Int = 4,
     val threadId: Long,
     val backupTime: Long,
     val forumId: Long,
@@ -27,6 +28,24 @@ data class BackupData(
     val authorName: String,
     val authorAvatar: String,
     /** Entry name inside the companion ZIP file for offline viewing. */
+    val imageKeyAuthorAvatar: String? = null,
+    val contentItems: List<BackupContentItem>,
+    /** All fetched replies (楼层 ≥ 2). May be a partial list if backup was cancelled. */
+    val replies: List<BackupReply> = emptyList(),
+)
+
+/**
+ * A single reply (post) in a backed-up thread.
+ */
+@Serializable
+data class BackupReply(
+    val id: Long,
+    val floor: Int,
+    val time: Long,
+    val authorId: Long,
+    val authorName: String,
+    val authorAvatar: String,
+    /** Entry name inside the companion ZIP file for the author avatar. */
     val imageKeyAuthorAvatar: String? = null,
     val contentItems: List<BackupContentItem>,
 )

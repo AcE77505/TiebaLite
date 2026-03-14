@@ -258,6 +258,16 @@ fun ThreadPage(
     }
 
     val backupDuplicateDialogState = rememberDialogState()
+    val backupCancelConfirmDialogState = rememberDialogState()
+    val backupProgressDialogState = rememberDialogState()
+
+    LaunchedEffect(state.backupProgress) {
+        if (state.backupProgress != null) {
+            backupProgressDialogState.show()
+        } else {
+            backupProgressDialogState.show = false
+        }
+    }
 
     viewModel.uiEvent.collectUiEventWithLifecycle {
         val message = when (it) {
@@ -381,6 +391,56 @@ fun ThreadPage(
         }
     ) {
         Text(text = stringResource(id = R.string.message_backup_exists))
+    }
+
+    // Cancel-backup confirmation dialog
+    ConfirmDialog(
+        dialogState = backupCancelConfirmDialogState,
+        onConfirm = viewModel::cancelBackup,
+        confirmText = stringResource(id = R.string.button_sure),
+        cancelText = stringResource(id = R.string.button_cancel),
+        title = { Text(text = stringResource(id = R.string.title_cancel_backup_confirm)) },
+    ) {
+        val currentPage = state.backupProgress?.currentPage ?: 0
+        Text(text = stringResource(id = R.string.message_cancel_backup_confirm, currentPage))
+    }
+
+    // Backup reply-fetch progress dialog
+    Dialog(
+        dialogState = backupProgressDialogState,
+        dialogProperties = AnyPopDialogProperties(
+            dismissOnBackPress = false,
+            dismissOnClickOutside = false,
+        ),
+        title = { Text(text = stringResource(id = R.string.title_backup_fetch_replies)) },
+        buttons = {
+            DialogNegativeButton(
+                text = stringResource(id = R.string.button_cancel),
+                onClick = { backupCancelConfirmDialogState.show() },
+            )
+            val progress = state.backupProgress
+            if (progress != null) {
+                DialogPositiveButton(
+                    text = if (progress.isPaused) {
+                        stringResource(id = R.string.button_next)
+                    } else {
+                        stringResource(id = R.string.button_stop)
+                    },
+                    onClick = viewModel::pauseResumeBackup,
+                )
+            }
+        },
+    ) {
+        val progress = state.backupProgress
+        if (progress != null) {
+            Text(
+                text = stringResource(
+                    id = R.string.message_backup_fetch_progress,
+                    progress.currentPage,
+                    progress.totalPage,
+                )
+            )
+        }
     }
 
     val onRefreshClicked: () -> Unit = {
