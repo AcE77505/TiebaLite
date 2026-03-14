@@ -26,6 +26,11 @@ import com.huanchengfly.tieba.post.arch.BaseStateViewModel
 import com.huanchengfly.tieba.post.arch.CommonUiEvent
 import com.huanchengfly.tieba.post.arch.TbLiteExceptionHandler
 import com.huanchengfly.tieba.post.arch.UiEvent
+import com.huanchengfly.tieba.post.backup.BackupContentItem
+import com.huanchengfly.tieba.post.backup.BackupData
+import com.huanchengfly.tieba.post.backup.BackupReply
+import com.huanchengfly.tieba.post.backup.BackupRepository
+import com.huanchengfly.tieba.post.backup.DuplicateBackupAction
 import com.huanchengfly.tieba.post.components.ClipBoardLinkDetector
 import com.huanchengfly.tieba.post.models.database.ThreadHistory
 import com.huanchengfly.tieba.post.repository.HistoryRepository
@@ -34,9 +39,14 @@ import com.huanchengfly.tieba.post.repository.PbPageRepository
 import com.huanchengfly.tieba.post.repository.PbPageUiResponse
 import com.huanchengfly.tieba.post.repository.ThreadStoreRepository
 import com.huanchengfly.tieba.post.repository.user.SettingsRepository
+import com.huanchengfly.tieba.post.ui.common.PbContentRender
 import com.huanchengfly.tieba.post.ui.common.PbContentRender.Companion.TAG_LZ
+import com.huanchengfly.tieba.post.ui.common.PicContentRender
+import com.huanchengfly.tieba.post.ui.common.VideoContentRender
 import com.huanchengfly.tieba.post.ui.models.PostData
+import com.huanchengfly.tieba.post.ui.models.SimpleForum
 import com.huanchengfly.tieba.post.ui.models.SubPostItemData
+import com.huanchengfly.tieba.post.ui.models.ThreadInfoData
 import com.huanchengfly.tieba.post.ui.page.Destination
 import com.huanchengfly.tieba.post.ui.page.Destination.Companion.navTypeOf
 import com.huanchengfly.tieba.post.ui.page.Destination.Reply
@@ -76,6 +86,7 @@ class ThreadViewModel @Inject constructor(
     private val historyRepo: HistoryRepository,
     private val storeRepo: ThreadStoreRepository,
     private val threadRepo: PbPageRepository,
+    private val backupRepo: BackupRepository,
     settingsRepository: SettingsRepository,
     savedStateHandle: SavedStateHandle
 ) : BaseStateViewModel<ThreadUiState>() {
@@ -183,6 +194,7 @@ class ThreadViewModel @Inject constructor(
             if (scrollToReply) {
                 sendUiEvent(ThreadUiEvent.LoadSuccess(page, postId))
             }
+            checkAndAutoBackup()
         }
     }
 
@@ -579,6 +591,398 @@ class ThreadViewModel @Inject constructor(
         ClipBoardLinkDetector.onCopyTiebaLink(link)
     }
 
+    /**
+     * Backup data extracted from the current loaded state, held temporarily while the user
+     * decides what to do about a duplicate.
+     */
+    private var pendingBackupData: BackupData? = null
+
+    /**
+     * Set to true when auto-backup has been initiated for this ViewModel instance, so that we
+     * don't trigger multiple concurrent auto-backup runs in the same thread-page session.
+     */
+    @Volatile private var autoBackupTriggered = false
+
+    /**
+     * Job for the ongoing multi-page reply-fetch backup operation. */
+    private var backupJob: Job? = null
+
+    /** Controls pause/resume of the reply-fetch loop. */
+    private val backupPaused = MutableStateFlow(false)
+
+    /**
+     * Set to true by [cancelBackup] so the reply-fetch loop exits and saves whatever it
+     * collected before the cancellation was requested.
+     */
+    @Volatile private var isCancellingBackup: Boolean = false
+
+    /**
+     * Snapshot of the [BackupData] with all replies fetched *so far*, updated after every
+     * successful page fetch. Used when [cancelBackup] is called mid-way.
+     */
+    @Volatile private var partialBackupData: BackupData? = null
+
+    /**
+     * Initiates the backup flow:
+     * - If no backup path is configured → emits [ThreadUiEvent.BackupPathNotSet]
+     * - Fetches all reply pages (page 1 … N) sequentially with the user-configured interval
+     *   between each response and the next request.
+     * - While fetching multiple pages, shows a progress dialog via [BackupProgressState].
+     * - After all pages are collected, if a backup for this thread already exists → saves
+     *   [pendingBackupData] and emits [ThreadUiEvent.BackupDuplicateExists]; otherwise backs
+     *   up immediately.
+     */
+    fun onBackupThread() {
+        val state = currentState
+        val forum = state.forum ?: return
+        val thread = state.thread ?: return
+        val firstPost = state.firstPost ?: return
+
+        // Build main-post content items from the already-loaded first post.
+        val contentItems = firstPost.contentRenders.mapNotNull { render ->
+            when (render) {
+                is PicContentRender -> BackupContentItem.Image(
+                    url = render.picUrl,
+                    originUrl = render.originUrl,
+                )
+                is VideoContentRender -> BackupContentItem.Video(
+                    videoUrl = render.videoUrl,
+                    coverUrl = render.picUrl,
+                    webUrl = render.webUrl,
+                )
+                else -> {
+                    val text = render.toString()
+                    if (text.isNotBlank() &&
+                        text != PbContentRender.MEDIA_PICTURE &&
+                        text != PbContentRender.MEDIA_VIDEO &&
+                        text != PbContentRender.MEDIA_VOICE
+                    ) {
+                        BackupContentItem.Text(text)
+                    } else null
+                }
+            }
+        }
+
+        // Reset per-backup state.
+        isCancellingBackup = false
+        partialBackupData = null
+        backupPaused.value = false
+        backupJob?.cancel()
+        backupJob = null
+        // Clear any leftover progress state from a previous backup run.
+        _uiState.update { it.copy(backupProgress = null) }
+
+        backupJob = launchJobInVM {
+            val uriSet = backupRepo.backupUri.first() != null
+            if (!uriSet) {
+                sendUiEvent(ThreadUiEvent.BackupPathNotSet)
+                return@launchJobInVM
+            }
+
+            // Fetch page 1 to determine total page count.
+            val page1Response = runCatching {
+                threadRepo.pbPage(threadId, 1, 0, forumId, seeLz = false, sortType = ThreadSortType.BY_ASC)
+            }.getOrElse { e ->
+                sendUiEvent(ThreadUiEvent.BackupFailed(e.message ?: e.localizedMessage ?: ""))
+                return@launchJobInVM
+            }
+
+            val totalPages = page1Response.page.new_total_page
+            val allPosts = mutableListOf<PostData>()
+            allPosts.addAll(page1Response.posts)
+
+            if (totalPages > 1) {
+                _uiState.update { it.copy(backupProgress = BackupProgressState(1, totalPages)) }
+
+                val interval = backupRepo.replyFetchInterval.first()
+
+                for (page in 2..totalPages) {
+                    if (isCancellingBackup) break
+
+                    // Respect the configured interval between response and next request.
+                    delay(interval)
+
+                    if (isCancellingBackup) break
+
+                    // Wait while paused by user (unblocks when resumed or cancelled).
+                    backupPaused.first { !it }
+
+                    if (isCancellingBackup) break
+
+                    val response = runCatching {
+                        threadRepo.pbPage(threadId, page, 0, forumId, seeLz = false, sortType = ThreadSortType.BY_ASC)
+                    }.getOrElse { break }
+
+                    allPosts.addAll(response.posts)
+
+                    // Update partial snapshot after each successful page fetch so that
+                    // cancelBackup() can save what was already collected.
+                    partialBackupData = buildBackupData(forum, thread, firstPost, contentItems, allPosts)
+
+                    _uiState.update {
+                        it.copy(backupProgress = BackupProgressState(page, totalPages, backupPaused.value))
+                    }
+                }
+
+                _uiState.update { it.copy(backupProgress = null) }
+            }
+
+            val data = if (isCancellingBackup) {
+                // Use the last partial snapshot, or build one from whatever we did collect.
+                partialBackupData ?: buildBackupData(forum, thread, firstPost, contentItems, allPosts)
+            } else {
+                buildBackupData(forum, thread, firstPost, contentItems, allPosts)
+            }
+
+            handleBackupData(data)
+
+            backupJob = null
+        }
+    }
+
+    /**
+     * Toggles the pause/resume state of the ongoing reply-fetch backup.
+     * Has no effect when no backup is in progress.
+     */
+    fun pauseResumeBackup() {
+        val newPaused = !backupPaused.value
+        backupPaused.value = newPaused
+        _uiState.update { state ->
+            state.copy(backupProgress = state.backupProgress?.copy(isPaused = newPaused))
+        }
+    }
+
+    /**
+     * Cancels the ongoing reply-fetch, keeps whatever has been collected so far, and
+     * proceeds to write that partial data to the backup file.
+     *
+     * Has no effect when no backup is in progress.
+     */
+    fun cancelBackup() {
+        if (backupJob == null) return
+        isCancellingBackup = true
+        // If currently paused, resume so the loop can detect the cancellation flag.
+        backupPaused.value = false
+    }
+
+    /**
+     * Builds a [BackupData] from the current thread state and the given [posts].
+     */
+    private fun buildBackupData(
+        forum: SimpleForum,
+        thread: ThreadInfoData,
+        firstPost: PostData,
+        contentItems: List<BackupContentItem>,
+        posts: List<PostData>,
+    ): BackupData {
+        val author = firstPost.author
+        val replies = posts.map { post ->
+            val postContentItems = post.contentRenders.mapNotNull { render ->
+                when (render) {
+                    is PicContentRender -> BackupContentItem.Image(
+                        url = render.picUrl,
+                        originUrl = render.originUrl,
+                    )
+                    is VideoContentRender -> BackupContentItem.Video(
+                        videoUrl = render.videoUrl,
+                        coverUrl = render.picUrl,
+                        webUrl = render.webUrl,
+                    )
+                    else -> {
+                        val text = render.toString()
+                        if (text.isNotBlank() &&
+                            text != PbContentRender.MEDIA_PICTURE &&
+                            text != PbContentRender.MEDIA_VIDEO &&
+                            text != PbContentRender.MEDIA_VOICE
+                        ) {
+                            BackupContentItem.Text(text)
+                        } else null
+                    }
+                }
+            }
+            BackupReply(
+                id = post.id,
+                floor = post.floor,
+                time = post.time,
+                authorId = post.author.id,
+                authorName = post.author.nameShow.ifEmpty { post.author.name },
+                authorAvatar = post.author.avatarUrl,
+                contentItems = postContentItems,
+            )
+        }
+        return BackupData(
+            threadId = threadId,
+            backupTime = System.currentTimeMillis(),
+            forumId = forum.first,
+            forumName = forum.second,
+            forumAvatar = forum.third,
+            title = thread.title,
+            authorId = author.id,
+            authorName = author.nameShow.ifEmpty { author.name },
+            authorAvatar = author.avatarUrl,
+            contentItems = contentItems,
+            postTime = firstPost.time,
+            replies = replies,
+            // replyNum is the authoritative total from the server; may exceed replies.size when
+            // some posts were removed for violations and therefore not fetchable.
+            replyNum = thread.replyNum,
+            likeCount = thread.like.count,
+        )
+    }
+
+    /**
+     * Resolves the duplicate-backup policy and either calls [doBackup] immediately or
+     * asks the user by emitting [ThreadUiEvent.BackupDuplicateExists].
+     */
+    private suspend fun handleBackupData(data: BackupData) {
+        val exists = backupRepo.checkExists(threadId)
+        if (!exists) {
+            doBackup(data, overwrite = false, keepBoth = false)
+            return
+        }
+        when (backupRepo.duplicateBackupAction.first()) {
+            DuplicateBackupAction.OVERWRITE -> doBackup(data, overwrite = true, keepBoth = false)
+            DuplicateBackupAction.KEEP_BOTH -> doBackup(data, overwrite = false, keepBoth = true)
+            DuplicateBackupAction.ASK -> {
+                pendingBackupData = data
+                sendUiEvent(ThreadUiEvent.BackupDuplicateExists)
+            }
+        }
+    }
+
+    /**
+     * Called after the user has decided how to handle a duplicate backup:
+     * [overwrite] = true replaces the old file; [keepBoth] = true writes a new numerically-suffixed file.
+     * Passing both false (cancel) does nothing.
+     */
+    fun performBackup(overwrite: Boolean, keepBoth: Boolean) {
+        val data = pendingBackupData ?: return
+        pendingBackupData = null
+        if (!overwrite && !keepBoth) return
+        launchInVM {
+            doBackup(data, overwrite = overwrite, keepBoth = keepBoth)
+        }
+    }
+
+    private suspend fun doBackup(data: BackupData, overwrite: Boolean, keepBoth: Boolean) {
+        val isOwnPost = data.authorId == currentState.user?.id
+        val success = runCatching {
+            backupRepo.saveBackup(data, overwrite = overwrite, keepBoth = keepBoth, isOwnPost = isOwnPost)
+        }.getOrElse { e ->
+            sendUiEvent(ThreadUiEvent.BackupFailed(e.localizedMessage ?: e.message ?: ""))
+            return
+        }
+        if (success) {
+            sendUiEvent(ThreadUiEvent.BackupSuccess)
+        } else {
+            sendUiEvent(ThreadUiEvent.BackupFailed(context.getString(R.string.title_backup_failed)))
+        }
+    }
+
+    /**
+     * Checks whether an auto-backup of this thread is warranted (once per ViewModel instance):
+     * - auto-backup setting must be on
+     * - the thread must be the current user's own post
+     * - a previous backup must exist
+     * - the latest backup's reply count must differ from the current reply count
+     *
+     * If all conditions are met, kicks off a background [performAutoBackup] silently.
+     */
+    private fun checkAndAutoBackup() {
+        if (autoBackupTriggered) return
+
+        val state = currentState
+        val thread = state.thread ?: return
+        val firstPost = state.firstPost ?: return
+        val user = state.user ?: return
+
+        // Only auto-backup the current user's own posts.
+        if (firstPost.author.id != user.id) return
+
+        autoBackupTriggered = true
+
+        launchInVM {
+            if (!backupRepo.autoBackupOwnPosts.first()) return@launchInVM
+            if (backupRepo.backupUri.first() == null) return@launchInVM
+
+            val latestReplyNum = backupRepo.getLatestReplyNumForThread(threadId) ?: return@launchInVM
+            if (latestReplyNum == thread.replyNum) return@launchInVM  // No change since last backup.
+
+            performAutoBackup()
+        }
+    }
+
+    /**
+     * Background variant of [onBackupThread]: fetches all reply pages without showing any
+     * progress dialog, then delegates to [handleBackupData] for duplicate handling.
+     * Has no effect when a backup is already in progress.
+     */
+    private fun performAutoBackup() {
+        if (backupJob != null) return  // Another backup already in progress.
+
+        val state = currentState
+        val forum = state.forum ?: return
+        val thread = state.thread ?: return
+        val firstPost = state.firstPost ?: return
+
+        val contentItems = firstPost.contentRenders.mapNotNull { render ->
+            when (render) {
+                is PicContentRender -> BackupContentItem.Image(
+                    url = render.picUrl,
+                    originUrl = render.originUrl,
+                )
+                is VideoContentRender -> BackupContentItem.Video(
+                    videoUrl = render.videoUrl,
+                    coverUrl = render.picUrl,
+                    webUrl = render.webUrl,
+                )
+                else -> {
+                    val text = render.toString()
+                    if (text.isNotBlank() &&
+                        text != PbContentRender.MEDIA_PICTURE &&
+                        text != PbContentRender.MEDIA_VIDEO &&
+                        text != PbContentRender.MEDIA_VOICE
+                    ) {
+                        BackupContentItem.Text(text)
+                    } else null
+                }
+            }
+        }
+
+        isCancellingBackup = false
+        partialBackupData = null
+        backupPaused.value = false
+
+        backupJob = launchJobInVM {
+            val interval = backupRepo.replyFetchInterval.first()
+
+            val page1Response = runCatching {
+                threadRepo.pbPage(threadId, 1, 0, forumId, seeLz = false, sortType = ThreadSortType.BY_ASC)
+            }.getOrElse { e ->
+                sendUiEvent(ThreadUiEvent.BackupFailed(e.message ?: e.localizedMessage ?: ""))
+                return@launchJobInVM
+            }
+
+            val totalPages = page1Response.page.new_total_page
+            val allPosts = mutableListOf<PostData>()
+            allPosts.addAll(page1Response.posts)
+
+            if (totalPages > 1) {
+                for (page in 2..totalPages) {
+                    delay(interval)
+                    val response = runCatching {
+                        threadRepo.pbPage(threadId, page, 0, forumId, seeLz = false, sortType = ThreadSortType.BY_ASC)
+                    }.getOrElse { break }
+                    allPosts.addAll(response.posts)
+                }
+            }
+
+            val data = buildBackupData(forum, thread, firstPost, contentItems, allPosts)
+            handleBackupData(data)
+            backupJob = null
+        }
+    }
+
     fun onReportThread(navigator: NavController) = viewModelScope.launch {
         TiebaUtil.reportPost(context, navigator, firstPostId.toString())
     }
@@ -750,4 +1154,16 @@ sealed interface ThreadUiEvent : UiEvent {
     data class ToReplyDestination(val direction: Reply): ThreadUiEvent
 
     data class ToSubPostsDestination(val direction: SubPosts): ThreadUiEvent
+
+    /** Backup path not configured yet – UI should navigate to backup management */
+    object BackupPathNotSet : ThreadUiEvent
+
+    /** A backup for the current thread already exists – UI should show a choice dialog */
+    object BackupDuplicateExists : ThreadUiEvent
+
+    /** Backup completed successfully */
+    object BackupSuccess : ThreadUiEvent
+
+    /** Backup failed */
+    data class BackupFailed(val message: String) : ThreadUiEvent
 }

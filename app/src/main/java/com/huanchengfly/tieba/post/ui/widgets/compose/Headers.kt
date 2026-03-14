@@ -252,12 +252,14 @@ private fun SharedTransitionUserName(
 
         val levelColor = Color(getIconColorByLevel(userLevel))
 
-        TextChip(
-            text = userLevel.toString(),
-            fontSize = 11.sp,
-            color = levelColor,
-            backgroundColor = levelColor.copy(0.25f),
-        )
+        if (userLevel > 0) {
+            TextChip(
+                text = userLevel.toString(),
+                fontSize = 11.sp,
+                color = levelColor,
+                backgroundColor = levelColor.copy(0.25f),
+            )
+        }
 
         if (isLz) {
             TextChip(text = stringResource(id = R.string.tip_lz))

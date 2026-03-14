@@ -6,6 +6,7 @@ import androidx.compose.material.icons.outlined.DashboardCustomize
 import androidx.compose.material.icons.outlined.FormatPaint
 import androidx.compose.material.icons.outlined.Shield
 import androidx.compose.material.icons.rounded.AccountCircle
+import androidx.compose.material.icons.rounded.Backup
 import androidx.compose.material.icons.rounded.Checklist
 import androidx.compose.material.icons.rounded.DoNotDisturbOff
 import androidx.compose.material.icons.rounded.MoreHoriz
@@ -86,6 +87,15 @@ fun SettingsPage(navigator: NavController) {
                         navigator.navigateDebounced(SettingsDestination.BlockSettings)
                     },
                     leadingIcon = Icons.Rounded.DoNotDisturbOff
+                )
+
+                TextPref(
+                    title = stringResource(id = R.string.title_backup_settings),
+                    summary = stringResource(id = R.string.summary_backup_settings),
+                    onClick = {
+                        navigator.navigateDebounced(SettingsDestination.BackupSettings)
+                    },
+                    leadingIcon = Icons.Rounded.Backup
                 )
 
                 TextPref(
