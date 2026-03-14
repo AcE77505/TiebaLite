@@ -820,6 +820,10 @@ class ThreadViewModel @Inject constructor(
             authorAvatar = author.avatarUrl,
             contentItems = contentItems,
             replies = replies,
+            // replyNum is the authoritative total from the server; may exceed replies.size when
+            // some posts were removed for violations and therefore not fetchable.
+            replyNum = thread.replyNum,
+            likeCount = thread.like.count,
         )
     }
 

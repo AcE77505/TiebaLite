@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -27,6 +28,8 @@ import com.huanchengfly.tieba.post.navigateDebounced
 import com.huanchengfly.tieba.post.ui.page.Destination
 import com.huanchengfly.tieba.post.ui.page.ProvideNavigator
 import com.huanchengfly.tieba.post.ui.page.thread.PostCard
+import com.huanchengfly.tieba.post.ui.page.thread.ThreadHeader
+import com.huanchengfly.tieba.post.ui.page.thread.ThreadSortType
 import com.huanchengfly.tieba.post.ui.widgets.compose.Avatar
 import com.huanchengfly.tieba.post.ui.widgets.compose.BackNavigationIcon
 import com.huanchengfly.tieba.post.ui.widgets.compose.MyScaffold
@@ -64,6 +67,13 @@ fun BackupViewerPage(
                 val backup = uiState.backup ?: return@StateScreen
                 val postData = uiState.postData ?: return@StateScreen
 
+                // When seeLz is active, filter replies to only the OP's posts.
+                val visibleReplies = if (uiState.seeLz) {
+                    uiState.replyDataList.filter { it.author.isLz }
+                } else {
+                    uiState.replyDataList
+                }
+
                 LazyColumn(
                     modifier = Modifier.fillMaxSize(),
                     contentPadding = contentPadding,
@@ -86,6 +96,36 @@ fun BackupViewerPage(
                             },
                             onMenuCopyClick = { navigator.navigateDebounced(Destination.CopyText(it)) },
                         )
+                    }
+
+                    // Show ThreadHeader only when there are replies stored in the backup.
+                    if (uiState.replyDataList.isNotEmpty() || backup.replyNum > 0) {
+                        item(key = "thread_header") {
+                            HorizontalDivider(
+                                thickness = 2.dp,
+                                modifier = Modifier.padding(horizontal = 16.dp, vertical = 0.dp),
+                            )
+                            ThreadHeader(
+                                replyNum = backup.replyNum,
+                                sortType = ThreadSortType.BY_ASC,
+                                isSeeLz = uiState.seeLz,
+                                onSeeLzChanged = viewModel::toggleSeeLz,
+                            )
+                        }
+
+                        items(items = visibleReplies, key = { it.id }) { reply ->
+                            PostCard(
+                                post = reply,
+                                onUserClick = {
+                                    navigator.navigateDebounced(
+                                        Destination.UserProfile(user = reply.author)
+                                    )
+                                },
+                                onMenuCopyClick = {
+                                    navigator.navigateDebounced(Destination.CopyText(it))
+                                },
+                            )
+                        }
                     }
                 }
             }

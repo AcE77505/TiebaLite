@@ -253,6 +253,7 @@ class BackupRepository @Inject constructor(
                         if (entryName.isNotEmpty() &&
                             !entryName.contains('/') &&
                             !entryName.contains('\\') &&
+                            !entryName.contains("..") &&
                             !entryName.contains('\u0000')
                         ) {
                             File(cacheDir, entryName).outputStream().use { out ->

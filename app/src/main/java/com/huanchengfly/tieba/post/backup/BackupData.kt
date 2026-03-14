@@ -12,10 +12,11 @@ import kotlinx.serialization.Serializable
  *  3 – replaced private-dir local paths with ZIP-entry image keys; images stored as
  *      `{threadId}.zip` (or `{threadId}_{backupTime}.zip`) in the user-chosen SAF directory
  *  4 – added [replies] field containing all fetched post replies
+ *  5 – added [replyNum] (total post count) and [likeCount] (total like/agree count)
  */
 @Serializable
 data class BackupData(
-    val version: Int = 4,
+    val version: Int = 5,
     val threadId: Long,
     val backupTime: Long,
     val forumId: Long,
@@ -32,6 +33,14 @@ data class BackupData(
     val contentItems: List<BackupContentItem>,
     /** All fetched replies (楼层 ≥ 2). May be a partial list if backup was cancelled. */
     val replies: List<BackupReply> = emptyList(),
+    /**
+     * Total reply count for the thread at the time of backup (equal to the number shown to the
+     * left of the "只看楼主" button).  May be greater than [replies].size when some replies
+     * were removed due to violations and therefore could not be fetched.
+     */
+    val replyNum: Int = 0,
+    /** Thread-level total like/agree count at the time of backup. */
+    val likeCount: Long = 0L,
 )
 
 /**
