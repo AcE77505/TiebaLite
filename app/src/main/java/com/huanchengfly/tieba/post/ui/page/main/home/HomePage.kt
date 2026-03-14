@@ -313,7 +313,7 @@ private fun ForumItemContent(forum: LikedForum, showAvatar: Boolean) {
             ) {
                 Text(
                     text = forum.level,
-                    modifier = Modifier.wrapContentSize(Alignment.Center),
+                    modifier = Modifier.fillMaxSize().wrapContentSize(Alignment.Center),
                     fontSize = 11.sp,
                     fontWeight = FontWeight.Bold
                 )
