@@ -654,8 +654,7 @@ class ThreadViewModel @Inject constructor(
                 pendingBackupData = data
                 sendUiEvent(ThreadUiEvent.BackupDuplicateExists)
             } else {
-                val dataWithImages = backupRepo.downloadAndStoreImages(data)
-                doBackup(dataWithImages, overwrite = false, keepBoth = false)
+                doBackup(data, overwrite = false, keepBoth = false)
             }
         }
     }
@@ -670,8 +669,7 @@ class ThreadViewModel @Inject constructor(
         pendingBackupData = null
         if (!overwrite && !keepBoth) return
         launchInVM {
-            val dataWithImages = backupRepo.downloadAndStoreImages(data)
-            doBackup(dataWithImages, overwrite = overwrite, keepBoth = keepBoth)
+            doBackup(data, overwrite = overwrite, keepBoth = keepBoth)
         }
     }
 

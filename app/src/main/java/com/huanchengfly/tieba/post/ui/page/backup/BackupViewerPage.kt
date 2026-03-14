@@ -37,7 +37,6 @@ import com.bumptech.glide.integration.compose.GlideImage
 import com.huanchengfly.tieba.post.R
 import com.huanchengfly.tieba.post.backup.BackupContentItem
 import com.huanchengfly.tieba.post.backup.BackupData
-import com.huanchengfly.tieba.post.backup.localImagesRelativePath
 import com.huanchengfly.tieba.post.ui.widgets.compose.Avatar
 import com.huanchengfly.tieba.post.ui.widgets.compose.BackNavigationIcon
 import com.huanchengfly.tieba.post.ui.widgets.compose.MyScaffold
@@ -79,13 +78,13 @@ fun BackupViewerPage(
                 contentPadding = contentPadding,
             ) {
                 item {
-                    BackupViewerHeader(backup = backup)
+                    BackupViewerHeader(backup = backup, imagesDir = uiState.imagesDir)
                     HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
                 }
                 items(items = backup.contentItems) { item ->
                     BackupContentItemView(
                         item = item,
-                        imagesDir = backup.localImagesDir(LocalContext.current),
+                        imagesDir = uiState.imagesDir,
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(horizontal = 16.dp, vertical = 4.dp),
@@ -97,12 +96,11 @@ fun BackupViewerPage(
 }
 
 @Composable
-private fun BackupViewerHeader(backup: BackupData) {
+private fun BackupViewerHeader(backup: BackupData, imagesDir: File?) {
     val context = LocalContext.current
     val formattedTime = remember(backup.backupTime) {
         DateTimeUtils.getRelativeTimeString(context, backup.backupTime)
     }
-    val imagesDir = remember(backup.threadId) { backup.localImagesDir(context) }
 
     Column(
         modifier = Modifier
@@ -120,8 +118,8 @@ private fun BackupViewerHeader(backup: BackupData) {
                 horizontalArrangement = Arrangement.spacedBy(6.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                val forumAvatarModel = remember(backup.localForumAvatar, backup.forumAvatar) {
-                    localFileOrUrl(imagesDir, backup.localForumAvatar, backup.forumAvatar)
+                val forumAvatarModel = remember(backup.imageKeyForumAvatar, backup.forumAvatar) {
+                    imageKeyOrUrl(imagesDir, backup.imageKeyForumAvatar, backup.forumAvatar)
                 }
                 if (forumAvatarModel != null) {
                     Avatar(
@@ -149,8 +147,8 @@ private fun BackupViewerHeader(backup: BackupData) {
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            val authorAvatarModel = remember(backup.localAuthorAvatar, backup.authorAvatar) {
-                localFileOrUrl(imagesDir, backup.localAuthorAvatar, backup.authorAvatar)
+            val authorAvatarModel = remember(backup.imageKeyAuthorAvatar, backup.authorAvatar) {
+                imageKeyOrUrl(imagesDir, backup.imageKeyAuthorAvatar, backup.authorAvatar)
             }
             Avatar(
                 data = authorAvatarModel,
@@ -172,7 +170,7 @@ private fun BackupViewerHeader(backup: BackupData) {
 @Composable
 private fun BackupContentItemView(
     item: BackupContentItem,
-    imagesDir: File,
+    imagesDir: File?,
     modifier: Modifier = Modifier,
 ) {
     when (item) {
@@ -185,8 +183,8 @@ private fun BackupContentItemView(
         }
 
         is BackupContentItem.Image -> {
-            val model = remember(item.localUrl, item.url) {
-                localFileOrUrl(imagesDir, item.localUrl, item.url)
+            val model = remember(item.imageKey, item.url) {
+                imageKeyOrUrl(imagesDir, item.imageKey, item.originUrl.takeIf { it.isNotBlank() } ?: item.url)
             }
             if (model != null) {
                 GlideImage(
@@ -200,8 +198,8 @@ private fun BackupContentItemView(
         }
 
         is BackupContentItem.Video -> {
-            val coverModel = remember(item.localCoverUrl, item.coverUrl) {
-                localFileOrUrl(imagesDir, item.localCoverUrl, item.coverUrl)
+            val coverModel = remember(item.imageKeyCover, item.coverUrl) {
+                imageKeyOrUrl(imagesDir, item.imageKeyCover, item.coverUrl)
             }
             Box(modifier = modifier.aspectRatio(16f / 9f)) {
                 if (coverModel != null) {
@@ -242,19 +240,13 @@ private fun BackupContentItemView(
 }
 
 /**
- * Returns a [File] for [localFileName] inside [imagesDir] if the file exists,
- * otherwise returns [fallbackUrl] (may be null if none is available).
+ * Returns a [File] for [imageKey] inside [imagesDir] if the file exists,
+ * otherwise returns [fallbackUrl] (may be null when unavailable).
  */
-private fun localFileOrUrl(imagesDir: File, localFileName: String?, fallbackUrl: String?): Any? {
-    if (!localFileName.isNullOrBlank()) {
-        val file = File(imagesDir, localFileName)
+private fun imageKeyOrUrl(imagesDir: File?, imageKey: String?, fallbackUrl: String?): Any? {
+    if (!imageKey.isNullOrBlank() && imagesDir != null) {
+        val file = File(imagesDir, imageKey)
         if (file.exists()) return file
     }
     return fallbackUrl?.takeIf { it.isNotBlank() }
 }
-
-/**
- * Returns the app-internal directory where images for this backup are stored.
- */
-private fun BackupData.localImagesDir(context: android.content.Context): File =
-    File(context.filesDir, localImagesRelativePath())

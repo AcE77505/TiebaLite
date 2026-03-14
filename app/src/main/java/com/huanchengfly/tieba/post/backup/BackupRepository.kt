@@ -14,7 +14,11 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
+import java.io.ByteArrayOutputStream
 import java.io.File
+import java.util.zip.ZipEntry
+import java.util.zip.ZipInputStream
+import java.util.zip.ZipOutputStream
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -52,16 +56,20 @@ class BackupRepository @Inject constructor(
      */
     suspend fun checkExists(threadId: Long): Boolean = withContext(Dispatchers.IO) {
         val treeUri = backupUri.first() ?: return@withContext false
-        findExactBackupUri(treeUri, threadId) != null
+        findDocumentUri(treeUri, "${threadId}.json") != null
     }
 
     /**
-     * Save a backup.
+     * Save a full backup (JSON + image ZIP) to the user-chosen SAF directory.
      *
-     * @param overwrite Replace the existing `{threadId}.json` file.
-     * @param keepBoth  Create a new file named `{threadId}_{backupTime}.json` alongside the existing one.
+     * This function downloads all images, packs them into a ZIP file named `{baseName}.zip`,
+     * and writes the updated [BackupData] as `{baseName}.json` — where `baseName` is
+     * `{threadId}` for a new backup and `{threadId}_{backupTime}` when [keepBoth] is true.
      *
-     * When neither [overwrite] nor [keepBoth] is true the function does nothing (user chose cancel).
+     * @param overwrite Replace the existing `{threadId}.json` and `{threadId}.zip`.
+     * @param keepBoth  Create timestamped files alongside the existing ones.
+     *
+     * When neither [overwrite] nor [keepBoth] is true the function does nothing.
      * Returns true on success, false when no backup directory is configured.
      */
     suspend fun saveBackup(
@@ -71,25 +79,39 @@ class BackupRepository @Inject constructor(
     ): Boolean = withContext(Dispatchers.IO) {
         val treeUri = backupUri.first() ?: return@withContext false
         val treeDocId = DocumentsContract.getTreeDocumentId(treeUri)
-        val jsonBytes = json.encodeToString(BackupData.serializer(), data).toByteArray(Charsets.UTF_8)
 
-        val existingUri = findExactBackupUri(treeUri, data.threadId)
+        val suffix = if (keepBoth) "_${data.backupTime}" else ""
+        val baseName = "${data.threadId}$suffix"
 
+        // For the non-keepBoth case, look up existing files to overwrite.
+        val existingJsonUri = if (suffix.isEmpty()) findDocumentUri(treeUri, "$baseName.json") else null
+        val existingZipUri  = if (suffix.isEmpty()) findDocumentUri(treeUri, "$baseName.zip")  else null
+
+        // 1. Download images and build the ZIP in memory.
+        val (dataWithKeys, zipBytes) = downloadAndBuildZip(data)
+
+        // 2. Write ZIP (only if there are images to store).
+        if (zipBytes != null) {
+            when {
+                existingZipUri != null && overwrite ->
+                    context.contentResolver.openOutputStream(existingZipUri, "wt")
+                        ?.use { it.write(zipBytes) }
+                else ->
+                    createAndWriteDoc(treeUri, treeDocId, "$baseName.zip", "application/zip", zipBytes)
+            }
+        }
+
+        // 3. Write JSON.
+        val jsonBytes = json.encodeToString(BackupData.serializer(), dataWithKeys)
+            .toByteArray(Charsets.UTF_8)
         when {
-            existingUri == null -> {
-                // No duplicate – create a new file
-                createAndWrite(treeUri, treeDocId, "${data.threadId}.json", jsonBytes)
-            }
-            overwrite -> {
-                // Truncate and overwrite the existing file
-                context.contentResolver.openOutputStream(existingUri, "wt")?.use { os ->
-                    os.write(jsonBytes)
-                }
-            }
-            keepBoth -> {
-                // Keep the old file and create a new one with a timestamp suffix
-                createAndWrite(treeUri, treeDocId, "${data.threadId}_${data.backupTime}.json", jsonBytes)
-            }
+            existingJsonUri == null ->
+                createAndWriteDoc(treeUri, treeDocId, "$baseName.json", "application/json", jsonBytes)
+            overwrite ->
+                context.contentResolver.openOutputStream(existingJsonUri, "wt")
+                    ?.use { it.write(jsonBytes) }
+            keepBoth ->
+                createAndWriteDoc(treeUri, treeDocId, "$baseName.json", "application/json", jsonBytes)
             // else: user cancelled – do nothing
         }
         true
@@ -133,14 +155,18 @@ class BackupRepository @Inject constructor(
 
     /**
      * Delete a backup identified by [threadId] and [backupTime].
-     * Returns true if deleted, false if not found.
-     * Also cleans up locally stored images when no other backup for the same thread remains.
+     * Removes both the JSON file and its companion ZIP (same base name).
+     * Also cleans up any leftover private cache/files for this thread.
+     * Returns true if the JSON file was deleted, false if not found.
      */
     suspend fun deleteBackup(threadId: Long, backupTime: Long): Boolean = withContext(Dispatchers.IO) {
         val treeUri = backupUri.first() ?: return@withContext false
         val treeDocId = DocumentsContract.getTreeDocumentId(treeUri)
         val childrenUri = DocumentsContract.buildChildDocumentsUriUsingTree(treeUri, treeDocId)
 
+        val jsonName1 = "$threadId.json"
+        val jsonName2 = "${threadId}_$backupTime.json"
+
         context.contentResolver.query(
             childrenUri,
             arrayOf(
@@ -151,120 +177,176 @@ class BackupRepository @Inject constructor(
         )?.use { cursor ->
             while (cursor.moveToNext()) {
                 val displayName = cursor.getString(1)
-                // Match both single-backup name and timestamped name
-                if (displayName == "${threadId}.json" || displayName == "${threadId}_${backupTime}.json") {
-                    val docId = cursor.getString(0)
-                    val docUri = DocumentsContract.buildDocumentUriUsingTree(treeUri, docId)
-                    val deleted = DocumentsContract.deleteDocument(context.contentResolver, docUri)
-                    if (deleted && !hasAnyBackupForThread(treeUri, threadId)) {
-                        File(context.filesDir, backupImagesRelativePath(threadId)).deleteRecursively()
+                if (displayName != jsonName1 && displayName != jsonName2) continue
+
+                val docId = cursor.getString(0)
+                val docUri = DocumentsContract.buildDocumentUriUsingTree(treeUri, docId)
+                val deleted = DocumentsContract.deleteDocument(context.contentResolver, docUri)
+                if (deleted) {
+                    // Delete the companion ZIP (same base name, .zip extension).
+                    val zipName = displayName.removeSuffix(".json") + ".zip"
+                    findDocumentUri(treeUri, zipName)?.let { zipUri ->
+                        DocumentsContract.deleteDocument(context.contentResolver, zipUri)
                     }
-                    return@withContext deleted
+                    // Clean up leftover viewer cache for this thread.
+                    viewerCacheDir(threadId).deleteRecursively()
                 }
+                return@withContext deleted
             }
         }
         false
     }
 
     /**
-     * Find a [BackupData] for [threadId] by reading the backup JSON file (if it exists).
+     * Read the primary [BackupData] for [threadId] from the JSON file (`{threadId}.json`).
      * Returns null when no backup is found or the directory is not configured.
      */
     suspend fun getBackupByThreadId(threadId: Long): BackupData? = withContext(Dispatchers.IO) {
         val treeUri = backupUri.first() ?: return@withContext null
-        val existingUri = findExactBackupUri(treeUri, threadId) ?: return@withContext null
+        val jsonUri = findDocumentUri(treeUri, "$threadId.json") ?: return@withContext null
         runCatching {
-            context.contentResolver.openInputStream(existingUri)?.use { stream ->
+            context.contentResolver.openInputStream(jsonUri)?.use { stream ->
                 json.decodeFromString<BackupData>(stream.bufferedReader().readText())
             }
         }.getOrNull()
     }
 
     /**
-     * Returns the app-internal directory where locally cached images for [threadId] are stored.
-     * The directory is created if it does not yet exist.
+     * Extracts the companion ZIP for [threadId] (from the user-chosen SAF directory) into a
+     * temporary viewer cache directory and returns that directory.
+     *
+     * Returns null when no ZIP is found or extraction fails.
+     * Subsequent calls reuse the cache if it is still intact.
      */
-    fun localImagesDir(threadId: Long): File =
-        File(context.filesDir, backupImagesRelativePath(threadId)).also { it.mkdirs() }
+    suspend fun extractImagesToCache(threadId: Long): File? = withContext(Dispatchers.IO) {
+        val treeUri = backupUri.first() ?: return@withContext null
+        val zipUri = findZipUri(treeUri, threadId) ?: return@withContext null
+
+        val cacheDir = viewerCacheDir(threadId)
+        // Re-extract only when the cache is empty or stale.
+        if (cacheDir.isDirectory && (cacheDir.listFiles()?.isNotEmpty() == true)) {
+            return@withContext cacheDir
+        }
+        cacheDir.mkdirs()
+
+        runCatching {
+            context.contentResolver.openInputStream(zipUri)?.use { input ->
+                ZipInputStream(input).use { zip ->
+                    var entry = zip.nextEntry
+                    while (entry != null) {
+                        // Guard against zip-slip attacks: only allow simple filenames without
+                        // path separators, parent references, or other special components.
+                        val entryName = entry.name
+                        if (entryName.isNotEmpty() &&
+                            !entryName.contains('/') &&
+                            !entryName.contains('\\') &&
+                            !entryName.contains('\u0000')
+                        ) {
+                            File(cacheDir, entryName).outputStream().use { out ->
+                                zip.copyTo(out)
+                            }
+                        }
+                        zip.closeEntry()
+                        entry = zip.nextEntry
+                    }
+                }
+            }
+            cacheDir
+        }.getOrNull()
+    }
+
+    // ── private helpers ───────────────────────────────────────────────────────
 
     /**
-     * Downloads all images referenced in [data] (forumAvatar, authorAvatar, content images/videos)
-     * to the app-internal backup-images directory and returns a copy of [data] with the local
-     * file names populated.  Individual download failures are silently ignored so that a partial
-     * set of local images is still useful.
+     * Downloads all images referenced in [data] and packs them into an in-memory ZIP.
+     *
+     * Only the highest-quality image is stored per content item (originUrl preferred for images).
+     * Individual download failures are silently ignored.
+     *
+     * @return The updated [BackupData] (with `imageKey*` fields populated) and the ZIP bytes
+     *         (null when no images were downloaded).
      */
-    suspend fun downloadAndStoreImages(data: BackupData): BackupData = withContext(Dispatchers.IO) {
-        val dir = File(context.filesDir, data.localImagesRelativePath()).also { it.mkdirs() }
+    private suspend fun downloadAndBuildZip(data: BackupData): Pair<BackupData, ByteArray?> {
+        // key → Glide-cached File
+        val imageEntries = linkedMapOf<String, File>()
 
-        val localForumAvatar = data.forumAvatar
-            ?.takeIf { it.isNotBlank() }
-            ?.let { url -> runCatching { downloadToFile(url, File(dir, "forum_avatar")) }.getOrNull() }
+        val imageKeyForumAvatar = data.forumAvatar?.takeIf { it.isNotBlank() }?.let { url ->
+            runCatching {
+                val key = "forum_avatar"
+                imageEntries[key] = GlideUtil.downloadCancelable(context, url, null)
+                key
+            }.getOrNull()
+        }
 
-        val localAuthorAvatar = data.authorAvatar
-            .takeIf { it.isNotBlank() }
-            ?.let { url -> runCatching { downloadToFile(url, File(dir, "author_avatar")) }.getOrNull() }
+        val imageKeyAuthorAvatar = data.authorAvatar.takeIf { it.isNotBlank() }?.let { url ->
+            runCatching {
+                val key = "author_avatar"
+                imageEntries[key] = GlideUtil.downloadCancelable(context, url, null)
+                key
+            }.getOrNull()
+        }
 
         val updatedItems = data.contentItems.mapIndexed { index, item ->
             when (item) {
                 is BackupContentItem.Image -> {
-                    val localUrl = item.url.takeIf { it.isNotBlank() }?.let { url ->
-                        runCatching { downloadToFile(url, File(dir, "img_$index")) }.getOrNull()
+                    // Prefer the highest-quality URL; only one image per content item is stored.
+                    val effectiveUrl = item.originUrl.takeIf { it.isNotBlank() } ?: item.url
+                    val imageKey = effectiveUrl.takeIf { it.isNotBlank() }?.let { url ->
+                        runCatching {
+                            val key = "img_$index"
+                            imageEntries[key] = GlideUtil.downloadCancelable(context, url, null)
+                            key
+                        }.getOrNull()
                     }
-                    val localOriginUrl = when {
-                        item.originUrl.isBlank() -> localUrl
-                        item.originUrl == item.url -> localUrl
-                        else -> runCatching {
-                            downloadToFile(item.originUrl, File(dir, "img_${index}_origin"))
-                        }.getOrNull() ?: localUrl
-                    }
-                    item.copy(localUrl = localUrl, localOriginUrl = localOriginUrl)
+                    item.copy(imageKey = imageKey)
                 }
                 is BackupContentItem.Video -> {
-                    val localCoverUrl = item.coverUrl.takeIf { it.isNotBlank() }?.let { url ->
-                        runCatching { downloadToFile(url, File(dir, "vid_${index}_cover")) }.getOrNull()
+                    val imageKeyCover = item.coverUrl.takeIf { it.isNotBlank() }?.let { url ->
+                        runCatching {
+                            val key = "vid_${index}_cover"
+                            imageEntries[key] = GlideUtil.downloadCancelable(context, url, null)
+                            key
+                        }.getOrNull()
                     }
-                    item.copy(localCoverUrl = localCoverUrl)
+                    item.copy(imageKeyCover = imageKeyCover)
                 }
                 else -> item
             }
         }
 
-        data.copy(
-            localForumAvatar = localForumAvatar,
-            localAuthorAvatar = localAuthorAvatar,
+        val updatedData = data.copy(
+            imageKeyForumAvatar = imageKeyForumAvatar,
+            imageKeyAuthorAvatar = imageKeyAuthorAvatar,
             contentItems = updatedItems,
         )
-    }
 
-    // ── helpers ──────────────────────────────────────────────────────────────
+        if (imageEntries.isEmpty()) return updatedData to null
 
-    private fun findExactBackupUri(treeUri: Uri, threadId: Long): Uri? {
-        val treeDocId = DocumentsContract.getTreeDocumentId(treeUri)
-        val childrenUri = DocumentsContract.buildChildDocumentsUriUsingTree(treeUri, treeDocId)
-        context.contentResolver.query(
-            childrenUri,
-            arrayOf(
-                DocumentsContract.Document.COLUMN_DOCUMENT_ID,
-                DocumentsContract.Document.COLUMN_DISPLAY_NAME,
-            ),
-            null, null, null
-        )?.use { cursor ->
-            while (cursor.moveToNext()) {
-                val displayName = cursor.getString(1)
-                if (displayName == "${threadId}.json") {
-                    val docId = cursor.getString(0)
-                    return DocumentsContract.buildDocumentUriUsingTree(treeUri, docId)
+        val zipBytes = ByteArrayOutputStream().also { baos ->
+            ZipOutputStream(baos).use { zip ->
+                for ((key, file) in imageEntries) {
+                    zip.putNextEntry(ZipEntry(key))
+                    file.inputStream().use { it.copyTo(zip) }
+                    zip.closeEntry()
                 }
             }
-        }
-        return null
+        }.toByteArray()
+
+        return updatedData to zipBytes
     }
 
-    private fun createAndWrite(treeUri: Uri, treeDocId: String, fileName: String, bytes: ByteArray) {
+    /** Creates a new document in [treeUri] and writes [bytes] to it. */
+    private fun createAndWriteDoc(
+        treeUri: Uri,
+        treeDocId: String,
+        fileName: String,
+        mimeType: String,
+        bytes: ByteArray,
+    ) {
         val newDocUri = DocumentsContract.createDocument(
             context.contentResolver,
             DocumentsContract.buildDocumentUriUsingTree(treeUri, treeDocId),
-            "application/json",
+            mimeType,
             fileName,
         ) ?: return
         context.contentResolver.openOutputStream(newDocUri)?.use { os ->
@@ -273,29 +355,64 @@ class BackupRepository @Inject constructor(
     }
 
     /**
-     * Downloads [url] and copies the result to [destFile].
-     * Returns [destFile]'s name (filename only) on success, or throws on failure.
+     * Returns the URI of a document named [fileName] in the top-level of [treeUri],
+     * or null if it does not exist.
      */
-    private suspend fun downloadToFile(url: String, destFile: File): String {
-        val cached = GlideUtil.downloadCancelable(context, url, null)
-        cached.copyTo(destFile, overwrite = true)
-        return destFile.name
-    }
-
-    /** Returns true if any backup JSON file for [threadId] still exists in [treeUri]. */
-    private fun hasAnyBackupForThread(treeUri: Uri, threadId: Long): Boolean {
+    private fun findDocumentUri(treeUri: Uri, fileName: String): Uri? {
         val treeDocId = DocumentsContract.getTreeDocumentId(treeUri)
         val childrenUri = DocumentsContract.buildChildDocumentsUriUsingTree(treeUri, treeDocId)
         context.contentResolver.query(
             childrenUri,
-            arrayOf(DocumentsContract.Document.COLUMN_DISPLAY_NAME),
+            arrayOf(
+                DocumentsContract.Document.COLUMN_DOCUMENT_ID,
+                DocumentsContract.Document.COLUMN_DISPLAY_NAME,
+            ),
             null, null, null
         )?.use { cursor ->
             while (cursor.moveToNext()) {
-                val name = cursor.getString(0)
-                if (name.startsWith("$threadId") && name.endsWith(".json")) return true
+                if (cursor.getString(1) == fileName) {
+                    return DocumentsContract.buildDocumentUriUsingTree(
+                        treeUri, cursor.getString(0)
+                    )
+                }
             }
         }
-        return false
+        return null
     }
+
+    /**
+     * Finds the ZIP file for [threadId] in [treeUri].
+     * Prefers the exact name `{threadId}.zip`; falls back to any `{threadId}_*.zip`.
+     */
+    private fun findZipUri(treeUri: Uri, threadId: Long): Uri? {
+        val treeDocId = DocumentsContract.getTreeDocumentId(treeUri)
+        val childrenUri = DocumentsContract.buildChildDocumentsUriUsingTree(treeUri, treeDocId)
+        var exactMatch: Uri? = null
+        var prefixMatch: Uri? = null
+        context.contentResolver.query(
+            childrenUri,
+            arrayOf(
+                DocumentsContract.Document.COLUMN_DOCUMENT_ID,
+                DocumentsContract.Document.COLUMN_DISPLAY_NAME,
+            ),
+            null, null, null
+        )?.use { cursor ->
+            while (cursor.moveToNext()) {
+                val name = cursor.getString(1)
+                val docUri = DocumentsContract.buildDocumentUriUsingTree(
+                    treeUri, cursor.getString(0)
+                )
+                when {
+                    name == "$threadId.zip" -> exactMatch = docUri
+                    name.startsWith("$threadId") && name.endsWith(".zip") ->
+                        if (prefixMatch == null) prefixMatch = docUri
+                }
+            }
+        }
+        return exactMatch ?: prefixMatch
+    }
+
+    /** Returns the viewer cache directory for [threadId] (may not yet exist). */
+    private fun viewerCacheDir(threadId: Long) =
+        File(context.cacheDir, "backup_viewer/$threadId")
 }
