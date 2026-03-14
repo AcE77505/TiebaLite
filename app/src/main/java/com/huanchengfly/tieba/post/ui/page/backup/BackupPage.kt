@@ -5,8 +5,8 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -19,7 +19,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -39,6 +38,7 @@ import com.huanchengfly.tieba.post.ui.widgets.compose.BackNavigationIcon
 import com.huanchengfly.tieba.post.ui.widgets.compose.ConfirmDialog
 import com.huanchengfly.tieba.post.ui.widgets.compose.LongClickMenu
 import com.huanchengfly.tieba.post.ui.widgets.compose.MyScaffold
+import com.huanchengfly.tieba.post.ui.widgets.compose.SharedTransitionUserHeader
 import com.huanchengfly.tieba.post.ui.widgets.compose.TitleCentredToolbar
 import com.huanchengfly.tieba.post.ui.widgets.compose.rememberDialogState
 import com.huanchengfly.tieba.post.ui.widgets.compose.rememberSnackbarHostState
@@ -194,21 +194,28 @@ private fun BackupItem(
         onClick = onOpenClick,
     ) {
         Column(
-            modifier = modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 12.dp),
-            verticalArrangement = Arrangement.spacedBy(6.dp),
+            modifier = modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            // Forum chip
-            Surface(
-                shape = MaterialTheme.shapes.extraSmall,
-                color = MaterialTheme.colorScheme.secondaryContainer,
+            SharedTransitionUserHeader(
+                uid = backup.authorId,
+                avatar = backup.authorAvatar,
+                name = backup.authorName,
+                desc = formattedTime,
+                onClick = null,
             ) {
-                Text(
-                    text = stringResource(id = R.string.title_backup_forum, backup.forumName),
-                    modifier = Modifier.padding(vertical = 2.dp, horizontal = 8.dp),
-                    style = MaterialTheme.typography.labelSmall,
-                )
+                Spacer(Modifier.weight(1.0f))
+
+                Surface(
+                    shape = MaterialTheme.shapes.extraSmall,
+                    color = MaterialTheme.colorScheme.secondaryContainer,
+                ) {
+                    Text(
+                        text = stringResource(id = R.string.title_backup_forum, backup.forumName),
+                        modifier = Modifier.padding(vertical = 4.dp, horizontal = 12.dp),
+                        style = MaterialTheme.typography.labelSmall,
+                    )
+                }
             }
 
             // Thread title
@@ -218,19 +225,6 @@ private fun BackupItem(
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
                 color = MaterialTheme.colorScheme.onSurface,
-            )
-
-            // Author + time
-            Text(
-                text = stringResource(
-                    id = R.string.tip_backup_author_time,
-                    backup.authorName,
-                    formattedTime
-                ),
-                fontSize = 12.sp,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
             )
         }
     }
