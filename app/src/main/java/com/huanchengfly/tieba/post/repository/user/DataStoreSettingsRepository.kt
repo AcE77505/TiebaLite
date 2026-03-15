@@ -223,7 +223,8 @@ private object ThemeSettingsTransformer : PreferenceTransformer<ThemeSettings> {
     private fun Preferences.getThemeSafely(): Theme {
         return try {
             this[intPreferencesKey(KEY_THEME)]?.let { Theme.entries.getOrNull(it) }
-        } catch (_: ClassCastException) {
+        } catch (e: ClassCastException) {
+            Log.w("ThemeSettings", "Legacy String theme value detected, migrating to Int", e)
             this[stringPreferencesKey(KEY_THEME)]?.let { legacyThemeFromName(it) }
         } ?: Theme.BLUE
     }

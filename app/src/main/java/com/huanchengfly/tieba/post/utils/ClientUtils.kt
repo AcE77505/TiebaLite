@@ -39,7 +39,7 @@ object ClientUtils {
     fun saveBaiduId(id: String?) {
         if (id.isNullOrEmpty() || id.isBlank() || id == baiduId) return
         baiduId = id
-        clientConfigSettings!!.save {
+        clientConfigSettings?.save {
             it.copy(baiduId = id)
         }
     }
@@ -59,16 +59,16 @@ object ClientUtils {
             }
             .firstOrNull() ?: return@launch
 
-        val client = rec.client
-        val wlConfig = rec.wlConfig
-        if (clientId == client.clientId && sampleId == wlConfig.sampleId) {
+        val newClientId = rec.client?.clientId ?: return@launch
+        val newSampleId = rec.wlConfig?.sampleId ?: return@launch
+        if (clientId == newClientId && sampleId == newSampleId) {
             return@launch
         }
-        clientId = client.clientId
-        sampleId = wlConfig.sampleId
+        clientId = newClientId
+        sampleId = newSampleId
 
-        clientConfigSettings!!.save {
-            it.copy(clientId = client.clientId, sampleId = wlConfig.sampleId)
+        clientConfigSettings?.save {
+            it.copy(clientId = newClientId, sampleId = newSampleId)
         }
     }
 }
