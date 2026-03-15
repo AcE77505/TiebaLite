@@ -27,7 +27,7 @@
     <string name="title_backup_overwrite">覆盖</string>
     <string name="title_backup_keep_both">均保留</string>
     <string name="title_set_backup_path">设置备份路径</string>
-    <string name="message_set_backup_path">请先设置备份路径，备份文件将保存到该路径。</string>
+    <string name="message_set_backup_path">请先设置备份路径，备份文件将保存到该路径。若已设置可以忽略。</string>
     <string name="tip_no_backup">暂无备份</string>
     <string name="title_backup_delete_confirm">删除备份</string>
     <string name="action_delete_backup">删除</string>
