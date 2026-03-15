@@ -97,4 +97,27 @@ class LoginViewModel @Inject constructor(@ApplicationContext val context: Contex
             loginJob = null
         }
     }
+
+    fun onLoginWithBduss(bduss: String) {
+        if (loginJob?.isActive == true) return
+        loginJob = viewModelScope.launch {
+            _uiEvent.emit(LoginUiEvent.Start)
+            val accountUtil = AccountUtil.getInstance()
+            runCatching {
+                // Wait until ZID fetch is complete (success or failure)
+                val finalState = uiState.first { !it.isLoadingZid }
+                val zid = finalState.zid
+                    ?: throw (finalState.error ?: Exception("Failed to obtain device ID"))
+                val account = accountUtil.fetchAccountWithBduss(bduss, zid)
+                accountUtil.saveNewAccount(context, account)
+            }
+            .onFailure {
+                _uiEvent.emit(LoginUiEvent.Error(it.getErrorMessage()))
+            }
+            .onSuccess {
+                _uiEvent.emit(LoginUiEvent.Success)
+            }
+            loginJob = null
+        }
+    }
 }

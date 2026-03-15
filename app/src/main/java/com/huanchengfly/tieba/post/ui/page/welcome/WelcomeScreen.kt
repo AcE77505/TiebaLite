@@ -86,9 +86,14 @@ import com.huanchengfly.tieba.post.ui.page.settings.ForumListPreference
 import com.huanchengfly.tieba.post.ui.page.settings.HideReplyPreference
 import com.huanchengfly.tieba.post.ui.page.settings.ImageLoadPreference
 import com.huanchengfly.tieba.post.ui.page.settings.ReduceEffectPreference
+import com.huanchengfly.tieba.post.arch.collectUiEventWithLifecycle
+import com.huanchengfly.tieba.post.ui.page.login.LoginMethodSheet
+import com.huanchengfly.tieba.post.ui.page.login.LoginUiEvent
+import com.huanchengfly.tieba.post.ui.page.login.LoginViewModel
 import com.huanchengfly.tieba.post.ui.widgets.compose.MyScaffold
 import com.huanchengfly.tieba.post.ui.widgets.compose.NegativeButton
 import com.huanchengfly.tieba.post.ui.widgets.compose.PositiveButton
+import com.huanchengfly.tieba.post.ui.widgets.compose.PromptDialog
 import com.huanchengfly.tieba.post.ui.widgets.compose.Sizes
 import com.huanchengfly.tieba.post.ui.widgets.compose.WebView
 import com.huanchengfly.tieba.post.ui.widgets.compose.WebViewState
@@ -96,6 +101,7 @@ import com.huanchengfly.tieba.post.ui.widgets.compose.containerColor
 import com.huanchengfly.tieba.post.ui.widgets.compose.contentColor
 import com.huanchengfly.tieba.post.ui.widgets.compose.preference.PrefsScreen
 import com.huanchengfly.tieba.post.ui.widgets.compose.preference.TextPref
+import com.huanchengfly.tieba.post.ui.widgets.compose.rememberDialogState
 import com.huanchengfly.tieba.post.ui.widgets.compose.rememberWebViewNavigator
 import com.huanchengfly.tieba.post.ui.widgets.compose.rememberWebViewState
 import kotlinx.coroutines.CoroutineScope
@@ -114,6 +120,7 @@ fun WelcomeScreen(navController: NavController, viewModel: WelcomeViewModel = hi
     val context = LocalContext.current
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val settingsRepo = viewModel.settingsRepository
+    val loginViewModel: LoginViewModel = hiltViewModel()
 
     val pages = remember {
         listOf(
@@ -133,6 +140,18 @@ fun WelcomeScreen(navController: NavController, viewModel: WelcomeViewModel = hi
         }
         viewModel.onSetupFinished()
     }
+
+    // Collect login events from LoginViewModel (used by BDUSS login)
+    loginViewModel.uiEvent.collectUiEventWithLifecycle { event ->
+        when (event) {
+            is LoginUiEvent.Success -> finishSetup(login = false)
+            is LoginUiEvent.Error -> toastShort(event.msg)
+            else -> {}
+        }
+    }
+
+    var showLoginMethodSheet by rememberSaveable { mutableStateOf(false) }
+    val bdussDialogState = rememberDialogState()
 
     val proceedBtnEnabled by remember {
         derivedStateOf {
@@ -162,7 +181,7 @@ fun WelcomeScreen(navController: NavController, viewModel: WelcomeViewModel = hi
             pagerState.animateScrollToPage(pagerState.currentPage - 1, animationSpec = tween())
         }
     }
-    val onLoginClicked: () -> Unit = { finishSetup(login = true) }
+    val onLoginClicked: () -> Unit = { showLoginMethodSheet = true }
 
     MyScaffold(
         bottomBar = {
@@ -211,6 +230,24 @@ fun WelcomeScreen(navController: NavController, viewModel: WelcomeViewModel = hi
             }
         }
     }
+
+    // Login method selection bottom sheet
+    if (showLoginMethodSheet) {
+        LoginMethodSheet(
+            onDismiss = { showLoginMethodSheet = false },
+            onWebLogin = { finishSetup(login = true) },
+            onBdussLogin = { bdussDialogState.show() },
+        )
+    }
+
+    // BDUSS input dialog
+    PromptDialog(
+        dialogState = bdussDialogState,
+        onConfirm = loginViewModel::onLoginWithBduss,
+        isError = { it.isBlank() },
+        title = { Text(stringResource(R.string.button_bduss_login)) },
+        content = { Text(stringResource(R.string.desc_bduss_input)) },
+    )
 
     BackHandler(enabled = backBtnEnabled, onBack = onBackClicked)
 }

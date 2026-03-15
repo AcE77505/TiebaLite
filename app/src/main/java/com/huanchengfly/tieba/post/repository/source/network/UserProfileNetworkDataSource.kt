@@ -40,6 +40,17 @@ object UserProfileNetworkDataSource {
         return loginBean to nameBean.userInfo
     }
 
+    /**
+     * 仅使用 BDUSS 登录（无需 STOKEN）
+     */
+    suspend fun loginWithBdussOnly(bduss: String): LoginBean {
+        require(bduss.isNotEmpty())
+        val loginBean = TiebaApi.getInstance().loginFlow(bduss, "").firstOrThrow()
+        val errorCode = loginBean.errorCode.toIntOrNull() ?: 0
+        if (errorCode != 0) throw TiebaException("Login error: $errorCode")
+        return loginBean
+    }
+
     suspend fun loadUserThreadPost(uid: Long, page: Int, isThread: Boolean): List<PostInfoList> {
         require(uid > 0) { "Invalid user ID: $uid." }
         require(page >= 1) { "Invalid page number: $page." }

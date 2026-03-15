@@ -35,8 +35,11 @@ import androidx.compose.material3.VerticalDivider
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -46,11 +49,13 @@ import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.window.core.layout.WindowSizeClass
 import com.huanchengfly.tieba.post.LocalWindowAdaptiveInfo
 import com.huanchengfly.tieba.post.R
+import com.huanchengfly.tieba.post.arch.collectUiEventWithLifecycle
 import com.huanchengfly.tieba.post.navigateDebounced
 import com.huanchengfly.tieba.post.theme.isDarkScheme
 import com.huanchengfly.tieba.post.theme.isTranslucent
@@ -58,15 +63,20 @@ import com.huanchengfly.tieba.post.ui.common.theme.compose.BebasFamily
 import com.huanchengfly.tieba.post.ui.common.theme.compose.onCase
 import com.huanchengfly.tieba.post.ui.page.Destination
 import com.huanchengfly.tieba.post.ui.page.LocalNavController
+import com.huanchengfly.tieba.post.ui.page.login.LoginMethodSheet
+import com.huanchengfly.tieba.post.ui.page.login.LoginUiEvent
+import com.huanchengfly.tieba.post.ui.page.login.LoginViewModel
 import com.huanchengfly.tieba.post.ui.page.main.emptyBlurBottomNavigation
 import com.huanchengfly.tieba.post.ui.page.settings.SettingsDestination
 import com.huanchengfly.tieba.post.ui.widgets.compose.Avatar
 import com.huanchengfly.tieba.post.ui.widgets.compose.ListMenuItem
 import com.huanchengfly.tieba.post.ui.widgets.compose.LocalSnackbarHostState
 import com.huanchengfly.tieba.post.ui.widgets.compose.MyScaffold
+import com.huanchengfly.tieba.post.ui.widgets.compose.PromptDialog
 import com.huanchengfly.tieba.post.ui.widgets.compose.PullToRefreshBox
 import com.huanchengfly.tieba.post.ui.widgets.compose.Sizes
 import com.huanchengfly.tieba.post.ui.widgets.compose.placeholder
+import com.huanchengfly.tieba.post.ui.widgets.compose.rememberDialogState
 import com.huanchengfly.tieba.post.utils.CuidUtils
 import com.huanchengfly.tieba.post.utils.LocalAccount
 import com.huanchengfly.tieba.post.utils.StringUtil
@@ -223,6 +233,25 @@ fun UserPage(viewModel: UserViewModel = viewModel()) {
     val isLoading by viewModel.isLoading.collectAsStateWithLifecycle()
     val windowSizeClass = LocalWindowAdaptiveInfo.current.windowSizeClass
     val isWindowHeightExpanded = windowSizeClass.isHeightAtLeastBreakpoint(WindowSizeClass.HEIGHT_DP_EXPANDED_LOWER_BOUND)
+    val loginViewModel: LoginViewModel = hiltViewModel()
+    val snackbarHostState = LocalSnackbarHostState.current
+    val coroutineScope = rememberCoroutineScope()
+
+    var showLoginMethodSheet by rememberSaveable { mutableStateOf(false) }
+    val bdussDialogState = rememberDialogState()
+
+    // Collect login events (BDUSS login result)
+    loginViewModel.uiEvent.collectUiEventWithLifecycle { event ->
+        when (event) {
+            is LoginUiEvent.Error -> coroutineScope.launch {
+                snackbarHostState.showSnackbar(
+                    getString(R.string.text_login_failed, event.msg),
+                    duration = SnackbarDuration.Short,
+                )
+            }
+            else -> {}
+        }
+    }
 
     MyScaffold(
         modifier = Modifier.fillMaxSize(),
@@ -263,7 +292,11 @@ fun UserPage(viewModel: UserViewModel = viewModel()) {
                     InfoCardPlaceHolder(modifier = Modifier.padding(16.dp))
                     StatCardPlaceholder(modifier = Modifier.padding(16.dp))
                 } else {
-                    LoginTipCard(modifier = Modifier.padding(16.dp))
+                    LoginTipCard(
+                        modifier = Modifier
+                            .padding(16.dp)
+                            .clickable { showLoginMethodSheet = true },
+                    )
                 }
 
                 if (isWindowHeightExpanded) {
@@ -300,6 +333,24 @@ fun UserPage(viewModel: UserViewModel = viewModel()) {
             }
         }
     }
+
+    // Login method selection bottom sheet
+    if (showLoginMethodSheet) {
+        LoginMethodSheet(
+            onDismiss = { showLoginMethodSheet = false },
+            onWebLogin = { navigator.navigateDebounced(Destination.Login) },
+            onBdussLogin = { bdussDialogState.show() },
+        )
+    }
+
+    // BDUSS input dialog
+    PromptDialog(
+        dialogState = bdussDialogState,
+        onConfirm = loginViewModel::onLoginWithBduss,
+        isError = { it.isBlank() },
+        title = { Text(stringResource(R.string.button_bduss_login)) },
+        content = { Text(stringResource(R.string.desc_bduss_input)) },
+    )
 }
 
 @Composable
