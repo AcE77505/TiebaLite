@@ -172,7 +172,7 @@ class AccountUtil private constructor(context: Context) {
      * 仅使用 BDUSS 登录并创建账号（无需 STOKEN）
      */
     suspend fun fetchAccountWithBduss(bduss: String, zid: String): Account {
-        require(zid.isNotEmpty())
+        require(zid.isNotEmpty()) { "ZID cannot be empty" }
         return scope.async {
             val loginBean = networkDataSource.loginWithBdussOnly(bduss)
             val uid = loginBean.user.id.toLong()

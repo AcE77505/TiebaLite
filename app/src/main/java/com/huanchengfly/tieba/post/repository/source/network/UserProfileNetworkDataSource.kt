@@ -44,7 +44,7 @@ object UserProfileNetworkDataSource {
      * 仅使用 BDUSS 登录（无需 STOKEN）
      */
     suspend fun loginWithBdussOnly(bduss: String): LoginBean {
-        require(bduss.isNotEmpty())
+        require(bduss.isNotEmpty()) { "BDUSS cannot be empty" }
         val loginBean = TiebaApi.getInstance().loginFlow(bduss, "").firstOrThrow()
         val errorCode = loginBean.errorCode.toIntOrNull() ?: 0
         if (errorCode != 0) throw TiebaException("Login error: $errorCode")

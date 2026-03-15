@@ -107,7 +107,7 @@ class LoginViewModel @Inject constructor(@ApplicationContext val context: Contex
                 // Wait until ZID fetch is complete (success or failure)
                 val finalState = uiState.first { !it.isLoadingZid }
                 val zid = finalState.zid
-                    ?: throw (finalState.error ?: Exception("Failed to obtain device ID"))
+                    ?: throw (finalState.error ?: Exception("Failed to obtain device ID. Please check your network connection and try again."))
                 val account = accountUtil.fetchAccountWithBduss(bduss, zid)
                 accountUtil.saveNewAccount(context, account)
             }
