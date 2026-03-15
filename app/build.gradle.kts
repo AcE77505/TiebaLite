@@ -2,6 +2,7 @@ import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import java.io.ByteArrayOutputStream
 import java.time.Clock
 import java.time.Instant
+import java.util.Properties
 
 plugins {
     alias(libs.plugins.android.application)
@@ -14,8 +15,6 @@ plugins {
     alias(libs.plugins.room)
     alias(libs.plugins.wire)
 }
-
-apply(from = "${rootProject.projectDir}/signing.gradle")
 
 wire {
     sourcePath {
@@ -49,6 +48,24 @@ android {
         resourceConfigurations.addAll(listOf("en", "zh-rCN"))
     }
 
+    signingConfigs {
+        val propFile = rootProject.file("signing.properties")
+        if (propFile.exists()) {
+            val properties = Properties()
+            propFile.inputStream().use { properties.load(it) }
+            create("config") {
+                storeFile = rootProject.file(properties.getProperty("KEYSTORE_FILE"))
+                storePassword = properties.getProperty("KEYSTORE_PASSWORD")
+                keyAlias = properties.getProperty("KEY_ALIAS")
+                keyPassword = properties.getProperty("KEY_PASSWORD")
+                enableV1Signing = true
+                enableV2Signing = true
+                enableV3Signing = true
+                enableV4Signing = true
+            }
+        }
+    }
+
     buildFeatures {
         compose = true
         buildConfig = true
@@ -60,7 +77,7 @@ android {
         val gitVersion = gitVersionProvider.get()
 
         all {
-            // Apply signing config from signing.properties, see ../signing.gradle
+            // Apply signing config from signing.properties, see android.signingConfigs above
             signingConfigs.findByName("config")?.let { signingConfig = it }
             // Replaced with buildConfigField#BUILD_GIT
             vcsInfo.include = false
