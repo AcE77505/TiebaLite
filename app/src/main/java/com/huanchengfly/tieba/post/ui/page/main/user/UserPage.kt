@@ -26,7 +26,6 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
@@ -59,6 +58,7 @@ import com.huanchengfly.tieba.post.arch.collectUiEventWithLifecycle
 import com.huanchengfly.tieba.post.navigateDebounced
 import com.huanchengfly.tieba.post.theme.isDarkScheme
 import com.huanchengfly.tieba.post.theme.isTranslucent
+import com.huanchengfly.tieba.post.toastShort
 import com.huanchengfly.tieba.post.ui.common.theme.compose.BebasFamily
 import com.huanchengfly.tieba.post.ui.common.theme.compose.onCase
 import com.huanchengfly.tieba.post.ui.page.Destination
@@ -234,8 +234,6 @@ fun UserPage(viewModel: UserViewModel = viewModel()) {
     val windowSizeClass = LocalWindowAdaptiveInfo.current.windowSizeClass
     val isWindowHeightExpanded = windowSizeClass.isHeightAtLeastBreakpoint(WindowSizeClass.HEIGHT_DP_EXPANDED_LOWER_BOUND)
     val loginViewModel: LoginViewModel = hiltViewModel()
-    val snackbarHostState = LocalSnackbarHostState.current
-    val coroutineScope = rememberCoroutineScope()
 
     var showLoginMethodSheet by rememberSaveable { mutableStateOf(false) }
     val bdussDialogState = rememberDialogState()
@@ -243,12 +241,7 @@ fun UserPage(viewModel: UserViewModel = viewModel()) {
     // Collect login events (BDUSS login result)
     loginViewModel.uiEvent.collectUiEventWithLifecycle { event ->
         when (event) {
-            is LoginUiEvent.Error -> coroutineScope.launch {
-                snackbarHostState.showSnackbar(
-                    getString(R.string.text_login_failed, event.msg),
-                    duration = SnackbarDuration.Short,
-                )
-            }
+            is LoginUiEvent.Error -> toastShort(getString(R.string.text_login_failed, event.msg))
             else -> {}
         }
     }
