@@ -27,7 +27,7 @@
     <string name="title_backup_overwrite">覆盖</string>
     <string name="title_backup_keep_both">均保留</string>
     <string name="title_set_backup_path">设置备份路径</string>
-    <string name="message_set_backup_path">请先设置备份路径，备份文件将保存到该路径。</string>
+    <string name="message_set_backup_path">请先设置备份路径，备份文件将保存到该路径。若已设置可以忽略。</string>
     <string name="tip_no_backup">暂无备份</string>
     <string name="title_backup_delete_confirm">删除备份</string>
     <string name="action_delete_backup">删除</string>
@@ -506,6 +506,11 @@
     <string name="text_god_verify">%s领域大神</string>
     <string name="text_login_failed">登录失败 %s</string>
     <string name="text_login_success">登录成功，即将跳转</string>
+    <string name="title_login_method">选择登录方式</string>
+    <string name="button_web_login">网页登录</string>
+    <string name="button_bduss_login">BDUSS 登录</string>
+    <string name="label_bduss_input">BDUSS</string>
+    <string name="desc_bduss_input">BDUSS 是您的百度账号令牌，可在浏览器 Cookie 中找到</string>
     <string name="video_preview_not_supported">暂不支持视频预览</string>
     <string name="about_license">开源许可证</string>
     <string name="about_source_code">开源代码</string>

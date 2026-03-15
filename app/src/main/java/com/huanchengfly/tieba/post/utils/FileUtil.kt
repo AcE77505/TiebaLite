@@ -6,6 +6,7 @@ import android.content.Context
 import android.net.Uri
 import android.os.Build
 import android.os.Environment
+import android.provider.DocumentsContract
 import android.provider.MediaStore
 import android.text.TextUtils
 import android.webkit.URLUtil
@@ -190,5 +191,36 @@ object FileUtil {
         try {
             this.delete()
         } catch (_: Exception) {}
+    }
+
+    /**
+     * Converts a SAF tree URI to a human-readable filesystem path.
+     *
+     * For URIs from `com.android.externalstorage.documents` the tree document ID
+     * has the form `{volumeId}:{relativePath}`:
+     *  - `primary:DCIM/Camera`  → `/storage/emulated/0/DCIM/Camera` (primary storage)
+     *  - `ED27-E605:tieba-backup` → `/storage/ED27-E605/tieba-backup` (SD card)
+     *
+     * Falls back to [Uri.toString] for any URI that cannot be resolved.
+     */
+    fun Uri.toDisplayPath(): String {
+        if (authority == "com.android.externalstorage.documents" &&
+            DocumentsContract.isTreeUri(this)
+        ) {
+            val treeDocId = DocumentsContract.getTreeDocumentId(this) ?: return toString()
+            val colonIdx = treeDocId.indexOf(':')
+            if (colonIdx >= 0) {
+                val volumeId = treeDocId.substring(0, colonIdx)
+                val relativePath = treeDocId.substring(colonIdx + 1)
+                @Suppress("DEPRECATION")
+                val basePath = if (volumeId == "primary") {
+                    Environment.getExternalStorageDirectory().absolutePath
+                } else {
+                    "/storage/$volumeId"
+                }
+                return if (relativePath.isEmpty()) basePath else "$basePath/$relativePath"
+            }
+        }
+        return toString()
     }
 }

@@ -209,7 +209,7 @@ class HomeRepository @Inject constructor(
                     id = it.id,
                     name = it.name,
                     signed = it.signInTimestamp >= today,
-                    level = "Lv.${it.level}"
+                    level = "${it.level}"
                 )
         }
 

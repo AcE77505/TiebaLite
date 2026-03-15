@@ -27,6 +27,7 @@ import com.huanchengfly.tieba.post.ui.widgets.compose.preference.SwitchPref
 import com.huanchengfly.tieba.post.ui.widgets.compose.preference.TextPref
 import com.huanchengfly.tieba.post.ui.widgets.compose.preference.TextPrefsScreen
 import com.huanchengfly.tieba.post.ui.widgets.compose.rememberDialogState
+import com.huanchengfly.tieba.post.utils.FileUtil.toDisplayPath
 import kotlinx.collections.immutable.persistentMapOf
 
 @Composable
@@ -58,11 +59,8 @@ fun BackupSettingsPage(
         TextPrefsScreen(contentPadding = paddingValues) {
             TextPref(
                 title = stringResource(id = R.string.title_set_backup_path),
-                summary = if (backupUri != null) {
-                    stringResource(id = R.string.summary_backup_path_set)
-                } else {
-                    stringResource(id = R.string.summary_backup_path_not_set)
-                },
+                summary = backupUri?.toDisplayPath()
+                    ?: stringResource(id = R.string.summary_backup_path_not_set),
                 onClick = { dirPickerLauncher.launch(null) },
                 leadingIcon = Icons.Outlined.Folder,
             )

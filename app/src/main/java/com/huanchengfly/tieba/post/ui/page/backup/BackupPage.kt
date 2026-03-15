@@ -71,14 +71,24 @@ fun BackupPage(
         }
     }
 
+    // Backup path not set dialog
+    val backupPathNotSetDialogState = rememberDialogState()
+    ConfirmDialog(
+        dialogState = backupPathNotSetDialogState,
+        onConfirm = { navigator.navigateDebounced(SettingsDestination.BackupSettings) },
+        confirmText = stringResource(id = R.string.btn_open_settings),
+        title = { Text(text = stringResource(id = R.string.title_set_backup_path)) },
+    ) {
+        Text(text = stringResource(id = R.string.message_set_backup_path))
+    }
+
     viewModel.uiEvent.collectUiEventWithLifecycle { event ->
-        val message = when (event) {
-            is BackupUiEvent.Toast -> event.message
-            else -> Unit
-        }
-        if (message is String) {
-            snackbarHostState.currentSnackbarData?.dismiss()
-            snackbarHostState.showSnackbar(message)
+        when (event) {
+            is BackupUiEvent.BackupPathNotSet -> backupPathNotSetDialogState.show()
+            is BackupUiEvent.Toast -> {
+                snackbarHostState.currentSnackbarData?.dismiss()
+                snackbarHostState.showSnackbar(event.message)
+            }
         }
     }
 

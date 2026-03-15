@@ -125,9 +125,9 @@ import com.huanchengfly.tieba.post.ui.models.PostData
 import com.huanchengfly.tieba.post.ui.models.SimpleForum
 import com.huanchengfly.tieba.post.ui.models.UserData
 import com.huanchengfly.tieba.post.ui.page.Destination.Forum
-import com.huanchengfly.tieba.post.ui.page.Destination.BackupManagement
 import com.huanchengfly.tieba.post.ui.page.ProvideNavigator
 import com.huanchengfly.tieba.post.ui.page.setResult
+import com.huanchengfly.tieba.post.ui.page.settings.SettingsDestination
 import com.huanchengfly.tieba.post.ui.page.threadstore.ThreadStoreUiEvent
 import com.huanchengfly.tieba.post.ui.widgets.compose.ActionItem
 import com.huanchengfly.tieba.post.ui.widgets.compose.Avatar
@@ -260,6 +260,7 @@ fun ThreadPage(
     val backupDuplicateDialogState = rememberDialogState()
     val backupCancelConfirmDialogState = rememberDialogState()
     val backupProgressDialogState = rememberDialogState()
+    val backupPathNotSetDialogState = rememberDialogState()
 
     LaunchedEffect(state.backupProgress) {
         if (state.backupProgress != null) {
@@ -309,7 +310,7 @@ fun ThreadPage(
 
             is ThreadUiEvent.ToSubPostsDestination -> navigator.navigateDebounced(it.direction)
 
-            is ThreadUiEvent.BackupPathNotSet -> navigator.navigateDebounced(BackupManagement)
+            is ThreadUiEvent.BackupPathNotSet -> backupPathNotSetDialogState.show()
 
             is ThreadUiEvent.BackupDuplicateExists -> backupDuplicateDialogState.show()
 
@@ -391,6 +392,16 @@ fun ThreadPage(
         }
     ) {
         Text(text = stringResource(id = R.string.message_backup_exists))
+    }
+
+    // Backup path not set dialog
+    ConfirmDialog(
+        dialogState = backupPathNotSetDialogState,
+        onConfirm = { navigator.navigateDebounced(SettingsDestination.BackupSettings) },
+        confirmText = stringResource(id = R.string.btn_open_settings),
+        title = { Text(text = stringResource(id = R.string.title_set_backup_path)) },
+    ) {
+        Text(text = stringResource(id = R.string.message_set_backup_path))
     }
 
     // Cancel-backup confirmation dialog

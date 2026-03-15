@@ -201,7 +201,7 @@ private object ThemeSettingsTransformer : PreferenceTransformer<ThemeSettings> {
         val transFilters = it[longPreferencesKey(KEY_TRANSLUCENT_FILTERS)]
 
         ThemeSettings(
-            theme = it[intPreferencesKey(KEY_THEME)]?.let { i -> Theme.entries[i] } ?: Theme.BLUE,
+            theme = it.getThemeSafely(),
             customColor = it.getColor(KEY_CUSTOM_COLOR),
             customVariant = it[intPreferencesKey(KEY_CUSTOM_VARIANT)]?.let { i -> Variant.entries[i] },
             transColor = it.getColor(KEY_TRANSLUCENT_COLOR) ?: TiebaBlue,
@@ -210,6 +210,35 @@ private object ThemeSettingsTransformer : PreferenceTransformer<ThemeSettings> {
             transDarkColorMode = it[booleanPreferencesKey(KEY_TRANSLUCENT_DARK_COLOR_MODE)] == true,
             transBackground = it[stringPreferencesKey(KEY_TRANSLUCENT_BACKGROUND)]
         )
+    }
+
+    /**
+     * Reads the theme value safely, handling legacy String values stored by older app versions.
+     *
+     * DataStore 1.1.0+ uses name-only key equality for Kotlin Multiplatform. This means
+     * `intPreferencesKey("theme")` and `stringPreferencesKey("theme")` resolve to the same
+     * map entry. If the stored value is the legacy String (e.g. "blue"), reading it as Int
+     * throws [ClassCastException]. We catch that and fall back to reading as String.
+     */
+    private fun Preferences.getThemeSafely(): Theme {
+        return try {
+            this[intPreferencesKey(KEY_THEME)]?.let { Theme.entries.getOrNull(it) }
+        } catch (e: ClassCastException) {
+            Log.w("ThemeSettings", "Legacy String theme value detected, migrating to Int", e)
+            this[stringPreferencesKey(KEY_THEME)]?.let { legacyThemeFromName(it) }
+        } ?: Theme.BLUE
+    }
+
+    private fun legacyThemeFromName(name: String): Theme = when (name) {
+        "translucent", "translucent_light_text", "translucent_dark_text" -> Theme.TRANSLUCENT
+        "custom" -> Theme.CUSTOM
+        "dynamic" -> Theme.DYNAMIC
+        "blue" -> Theme.BLUE
+        "green" -> Theme.GREEN
+        "orange" -> Theme.ORANGE
+        "pink" -> Theme.PINK
+        "purple" -> Theme.PURPLE
+        else -> Theme.BLUE
     }
 
     override val set: (MutablePreferences, ThemeSettings) -> Unit = { it, theme ->

@@ -56,6 +56,8 @@ import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.res.vectorResource
+import androidx.compose.ui.text.PlatformTextStyle
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -190,12 +192,9 @@ private fun ForumItemPlaceholder(showAvatar: Boolean) {
         Spacer(modifier = Modifier.width(8.dp))
         Box(
             modifier = Modifier
-                .width(54.dp)
-                .padding(vertical = 4.dp)
-                .placeholder(color = placeholderColor)
-        ) {
-            Text(text = "0", fontSize = 11.sp, fontWeight = FontWeight.Bold)
-        }
+                .size(22.dp)
+                .placeholder(color = placeholderColor, shape = CircleShape)
+        )
     }
 }
 
@@ -304,27 +303,36 @@ private fun ForumItemContent(forum: LikedForum, showAvatar: Boolean) {
             )
         }
 
-        Surface(
-            modifier = Modifier.width(54.dp),
-            shape = MaterialTheme.shapes.extraSmall,
-            color = MaterialTheme.colorScheme.secondary,
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(4.dp)
         ) {
-            Row(
-                modifier = Modifier.padding(vertical = 4.dp),
-                horizontalArrangement = Arrangement.Center,
-                verticalAlignment = Alignment.CenterVertically
+            Surface(
+                modifier = Modifier.size(22.dp),
+                shape = CircleShape,
+                color = MaterialTheme.colorScheme.secondary,
             ) {
-                Text(text = forum.level, fontSize = 11.sp, fontWeight = FontWeight.Bold)
-
-                if (forum.signed) {
-                    Spacer(modifier = Modifier.width(4.dp))
-
-                    Icon(
-                        imageVector = Icons.Rounded.Check,
-                        contentDescription = stringResource(id = R.string.tip_signed),
-                        modifier = Modifier.size(12.dp),
+                Box(
+                    contentAlignment = Alignment.Center,
+                    modifier = Modifier.fillMaxSize()
+                ) {
+                    Text(
+                        text = forum.level,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold,
+                        style = TextStyle(
+                            platformStyle = PlatformTextStyle(includeFontPadding = false)
+                        )
                     )
                 }
+            }
+
+            if (forum.signed) {
+                Icon(
+                    imageVector = Icons.Rounded.Check,
+                    contentDescription = stringResource(id = R.string.tip_signed),
+                    modifier = Modifier.size(12.dp),
+                )
             }
         }
     }
@@ -649,7 +657,7 @@ private fun HomePageSkeletonScreenPreview() = TiebaLiteTheme {
 @Composable
 private fun ForumItemContentPreview() = TiebaLiteTheme {
     val forums = (0..15).map { i ->
-        LikedForum(id = i.toLong(), name = "Forum $i", level = "Lv.${Random.nextInt(1, 99)}")
+        LikedForum(id = i.toLong(), name = "Forum $i", level = "${Random.nextInt(1, 18)}")
     }
     Surface {
         Column {
