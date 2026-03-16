@@ -1,11 +1,11 @@
 package com.huanchengfly.tieba.post.ui.page.main.notifications.list
 
 import android.content.Context
+import android.util.Log
 import com.huanchengfly.tieba.post.R
 import com.huanchengfly.tieba.post.api.TiebaApi
 import com.huanchengfly.tieba.post.api.models.MessageListBean
 import com.huanchengfly.tieba.post.api.models.MessageListBean.MessageInfoBean
-import com.huanchengfly.tieba.post.api.retrofit.exception.TiebaException
 import com.huanchengfly.tieba.post.api.retrofit.exception.TiebaNotLoggedInException
 import com.huanchengfly.tieba.post.api.retrofit.exception.getErrorMessage
 import com.huanchengfly.tieba.post.arch.BaseViewModel
@@ -203,6 +203,8 @@ sealed interface NotificationsListPartialChange : PartialChange<NotificationsLis
     }
 }
 
+private const val TAG = "NotificationsListViewModel"
+
 /**
  * Convert MessageInfo to UI Model
  *
@@ -217,16 +219,33 @@ private suspend fun List<MessageInfoBean>.mapUiModel(
 ): List<MessageItemData> {
     return withContext(Dispatchers.Default) {
         val isReply = type == NotificationsType.ReplyMe
-        map {
+        mapNotNull {
             val isFloor = it.isFloor == "1"
-            val replyUser = it.replyer!!.run {
-                ReplyUser(
-                    id = id?.toLongOrNull() ?: throw TiebaException("Invalid reply user ID: $id"),
-                    nameShow = nameShow ?: name ?: "",
-                    avatarUrl = if (portrait.isNullOrEmpty()) null else StringUtil.getAvatarUrl(portrait),
-                    isFans = isFans == "1"
-                )
+            val threadId = it.threadId?.toLongOrNull() ?: run {
+                Log.w(TAG, "mapUiModel: skipping item with invalid threadId=${it.threadId}")
+                return@mapNotNull null
             }
+            val postId = it.postId?.toLongOrNull() ?: run {
+                Log.w(TAG, "mapUiModel: skipping item with invalid postId=${it.postId}")
+                return@mapNotNull null
+            }
+            val time = it.time?.toLongOrNull() ?: 0L
+            val replyer = it.replyer
+            if (replyer == null) {
+                Log.w(TAG, "mapUiModel: replyer is null for item threadId=$threadId, using placeholder")
+            }
+            val replyUserId = replyer?.id?.toLongOrNull()
+            if (replyer != null && replyUserId == null) {
+                Log.w(TAG, "mapUiModel: invalid replyer.id=${replyer.id} for threadId=$threadId, using 0")
+            }
+            val replyUser = ReplyUser(
+                id = replyUserId ?: 0L,
+                nameShow = replyer?.nameShow ?: replyer?.name ?: "",
+                avatarUrl = replyer?.portrait
+                    ?.takeIf { portrait -> portrait.isNotEmpty() }
+                    ?.let { portrait -> StringUtil.getAvatarUrl(portrait) },
+                isFans = replyer?.isFans == "1"
+            )
 
             // Note: conditions from NotificationsListPage, do not touch
             val title = when {
@@ -249,20 +268,26 @@ private suspend fun List<MessageInfoBean>.mapUiModel(
 
             MessageItemData(
                 replyUser = replyUser,
-                threadId = it.threadId?.toLongOrNull() ?: throw TiebaException("Invalid thread ID ${it.threadId}."),
-                postId = it.postId?.toLongOrNull() ?: throw TiebaException("Invalid post ID ${it.postId}."),
+                threadId = threadId,
+                postId = postId,
                 isBlocked = isBlocked(replyUser.id, it.content.orEmpty()),
                 isFloor = isFloor,
                 title = title?.emoticonString,
                 content = it.content?.emoticonString,
-                time = DateTimeUtils.fixTimestamp(it.time!!.toLong()),
+                time = DateTimeUtils.fixTimestamp(time),
                 quoteContent = quoteContent,
                 quoteUser = it.quoteUser?.run {
-                    Author(
-                        id = id?.toLongOrNull() ?: throw TiebaException("Invalid quote user ID: $id"),
-                        name = nameShow ?: name ?: "",
-                        avatarUrl = StringUtil.getAvatarUrl(portrait)
-                    )
+                    val userId = id?.toLongOrNull()
+                    if (userId == null) {
+                        Log.w(TAG, "mapUiModel: invalid quoteUser.id=$id for threadId=$threadId, omitting quoteUser")
+                        null
+                    } else {
+                        Author(
+                            id = userId,
+                            name = nameShow ?: name ?: "",
+                            avatarUrl = StringUtil.getAvatarUrl(portrait)
+                        )
+                    }
                 },
                 quotePid = it.quotePid?.toLongOrNull(),
                 forumName = it.forumName,

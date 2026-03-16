@@ -9,6 +9,8 @@ import com.huanchengfly.tieba.post.models.BaseBean
 class MessageListBean : BaseBean() {
     @SerializedName("error_code")
     val errorCode: String? = null
+
+    @SerializedName("time")
     val time: Long = 0
 
     @JsonAdapter(MessageListAdapter::class)
@@ -18,31 +20,47 @@ class MessageListBean : BaseBean() {
     @JsonAdapter(MessageListAdapter::class)
     @SerializedName("at_list")
     val atList: List<MessageInfoBean>? = null
+
+    @SerializedName("page")
     val page: PageInfoBean? = null
+
+    @SerializedName("message")
     val message: MessageBean? = null
 
     fun getErrorCode(): Int = Integer.valueOf(errorCode!!)
 
     data class UserInfoBean(
+        @SerializedName("id")
         val id: String? = null,
+
+        @SerializedName("name")
         val name: String? = null,
 
         @SerializedName("name_show")
         val nameShow: String? = null,
 
         @JsonAdapter(PortraitAdapter::class)
+        @SerializedName("portrait")
         val portrait: String? = null,
     )
 
     data class ReplyerInfoBean(
+        @SerializedName("id")
         val id: String? = null,
+
+        @SerializedName("name")
         val name: String? = null,
+
         @SerializedName("name_show")
         val nameShow: String? = null,
+
         @JsonAdapter(PortraitAdapter::class)
+        @SerializedName("portrait")
         val portrait: String? = null,
+
         @SerializedName("is_friend")
         val isFriend: String? = null,
+
         @SerializedName("is_fans")
         val isFans: String? = null,
     )
@@ -50,12 +68,18 @@ class MessageListBean : BaseBean() {
     data class MessageInfoBean(
         @SerializedName("is_floor")
         val isFloor: String? = null,
+
+        @SerializedName("title")
         val title: String? = null,
+
+        @SerializedName("content")
         val content: String? = null,
 
         @SerializedName("quote_content")
         //有时候会引用的回复楼，有时候引用的楼中楼
         val quoteContent: String? = null,
+
+        @SerializedName("replyer")
         val replyer: ReplyerInfoBean? = null,
 
         @SerializedName("quote_user")
@@ -66,6 +90,8 @@ class MessageListBean : BaseBean() {
 
         @SerializedName("post_id")
         val postId: String? = null,
+
+        @SerializedName("time")
         val time: String? = null,
 
         @SerializedName("fname")
@@ -76,6 +102,8 @@ class MessageListBean : BaseBean() {
 
         @SerializedName("thread_type")
         val threadType: String? = null,
+
+        @SerializedName("unread")
         val unread: String? = null,
     )
 
@@ -85,7 +113,11 @@ class MessageListBean : BaseBean() {
 
         @SerializedName("atme")
         val atMe: String? = null
+
+        @SerializedName("fans")
         val fans: String? = null
+
+        @SerializedName("recycle")
         val recycle: String? = null
 
         @SerializedName("storethread")
