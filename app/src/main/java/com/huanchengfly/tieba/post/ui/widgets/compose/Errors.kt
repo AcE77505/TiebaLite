@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.requiredWidthIn
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -182,16 +183,19 @@ fun ErrorStackTraceScreen(
             style = MaterialTheme.typography.titleLarge
         )
 
-        Text(
-            text = stackTrace ?: stringResource(id = R.string.message_unknown_error),
+        SelectionContainer(
             modifier = Modifier
                 .weight(1.0f)
                 .verticalScroll(rememberScrollState())
                 .horizontalScroll(rememberScrollState()),
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            softWrap = false,
-            style = MaterialTheme.typography.bodyLarge
-        )
+        ) {
+            Text(
+                text = stackTrace ?: stringResource(id = R.string.message_unknown_error),
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                softWrap = false,
+                style = MaterialTheme.typography.bodyLarge
+            )
+        }
 
         actions?.invoke()
     }
