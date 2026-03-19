@@ -72,21 +72,33 @@ class PhotoViewViewModel : ViewModel(), DataProvider {
                 val stateSnapshot = _state.first()
                 val picAmount = picPageBean.picAmount ?: throw TiebaException("加载列表失败, 远古坟贴?")
                 val fetchedItems = picPageBean.picList.orEmpty().toUniquePhotoViewItems(old = stateSnapshot.data)
-                if (fetchedItems.isEmpty()) throw TiebaException("加载列表失败, 远古坟贴?")
-                val firstItemIndex = fetchedItems.first().overallIndex
-                val localItems =
-                    if (viewData.data.picIndex == 1) emptyList() else viewData.picItems.subList(
-                        0,
-                        viewData.data.picIndex - 1
-                    ).mapIndexed { index, item ->
-                        PhotoViewItem(
-                            item = item,
-                            overallIndex = firstItemIndex - (viewData.data.picIndex - 1 - index),
-                        )
+                // When the API returns no usable items (picList absent/empty or all items null),
+                // fall back to the locally available picItems like the offline/backup mode does.
+                val items: List<PhotoViewItem>
+                val hasNext: Boolean
+                val hasPrev: Boolean
+                if (fetchedItems.isEmpty()) {
+                    items = viewData.picItems.mapIndexed { index, item ->
+                        PhotoViewItem(item = item, overallIndex = index + 1)
                     }
-                val items = localItems + fetchedItems
-                val hasNext = items.last().overallIndex < picAmount
-                val hasPrev = items.first().overallIndex > 1
+                    hasNext = false
+                    hasPrev = false
+                } else {
+                    val firstItemIndex = fetchedItems.first().overallIndex
+                    val localItems =
+                        if (viewData.data.picIndex == 1) emptyList() else viewData.picItems.subList(
+                            0,
+                            viewData.data.picIndex - 1
+                        ).mapIndexed { index, item ->
+                            PhotoViewItem(
+                                item = item,
+                                overallIndex = firstItemIndex - (viewData.data.picIndex - 1 - index),
+                            )
+                        }
+                    items = localItems + fetchedItems
+                    hasNext = items.last().overallIndex < picAmount
+                    hasPrev = items.first().overallIndex > 1
+                }
                 val initialIndex: Int? = items
                     .indexOfFirst { it.picId == viewData.data.picId }
                     .takeIf { it != -1 }

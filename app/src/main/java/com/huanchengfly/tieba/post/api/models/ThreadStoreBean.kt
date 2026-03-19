@@ -15,29 +15,29 @@ data class ThreadStoreBean(
     data class ThreadStoreInfo(
         @SerializedName("thread_id")
         val threadId: Long,
-        val title: String,
+        val title: String? = null,
         @SerializedName("forum_name")
-        val forumName: String,
-        val author: AuthorInfo,
-        val media: List<MediaInfo>,
+        val forumName: String? = null,
+        val author: AuthorInfo? = null,
+        val media: List<MediaInfo>? = null,
         @SerializedName("is_deleted")
         val isDeleted: Int,
         @SerializedName("last_time")
-        val lastTime: String,
-        val type: String,
-        val status: String,
+        val lastTime: String? = null,
+        val type: String? = null,
+        val status: String? = null,
         @SerializedName("max_pid")
-        val maxPid: String,
+        val maxPid: String? = null,
         @SerializedName("min_pid")
-        val minPid: String,
+        val minPid: String? = null,
         @SerializedName("mark_pid")
-        val markPid: String,
+        val markPid: String? = null,
         @SerializedName("mark_status")
-        val markStatus: String,
+        val markStatus: String? = null,
         @SerializedName("post_no")
         val postNo: Int,
         @SerializedName("post_no_msg")
-        val postNoMsg: String,
+        val postNoMsg: String? = null,
         val count: Int
     ) : BaseBean()
 
