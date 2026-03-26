@@ -337,9 +337,9 @@ internal fun ReplyPageContent(
     var startClosingAnimation by remember { mutableStateOf(false) }
 
     fun showKeyboard() {
-        editTextView?.apply {
-            requestFocus()
-            showKeyboard(context, this)
+        editTextView?.post {
+            editTextView?.requestFocus()
+            showKeyboard(context, editTextView!!)
         }
         keyboardController?.show()
     }
