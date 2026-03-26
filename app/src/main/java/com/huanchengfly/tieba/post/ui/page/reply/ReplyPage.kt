@@ -25,11 +25,13 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.imeAnimationTarget
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.requiredHeightIn
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.windowInsetsBottomHeight
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.grid.GridCells
@@ -442,7 +444,7 @@ internal fun ReplyPageContent(
         Modifier
             .fillMaxWidth()
             .navigationBarsPadding()
-            .consumeWindowInsets(WindowInsets.ime)
+            .imePadding()
     } else {
         Modifier
             .fillMaxWidth()
@@ -464,10 +466,7 @@ internal fun ReplyPageContent(
                 if (imeAnimationEnd && (!visibility && imeAnimationTargetHeight > 10)) {
                     hideKeyboard()
                 }
-            }
-            .padding(bottom = with(density) {
-                imeAnimationTargetHeight.toDp()
-            }),
+            },
         verticalArrangement = Arrangement.Bottom
     ) {
         Row(
@@ -654,11 +653,11 @@ internal fun ReplyPageContent(
                 }
             }
         }
-        Spacer(
-            modifier = Modifier
-                .fillMaxWidth()
-                .windowInsetsBottomHeight(WindowInsets.ime)
-        )
+//        Spacer(
+//            modifier = Modifier
+//                .fillMaxWidth()
+//                .windowInsetsPadding(WindowInsets.ime)
+//        )
         if (curKeyboardType != NONE) {
             Column(modifier = Modifier.height(panelHeight)) {
                 when (curKeyboardType) {
