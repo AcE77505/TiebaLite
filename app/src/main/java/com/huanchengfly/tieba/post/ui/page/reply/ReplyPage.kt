@@ -338,8 +338,8 @@ internal fun ReplyPageContent(
 
     fun showKeyboard() {
         editTextView?.apply {
-            showKeyboard(context, this)
             requestFocus()
+            showKeyboard(context, this)
         }
         keyboardController?.show()
     }
@@ -687,8 +687,8 @@ internal fun ReplyPageContent(
                                 viewModel.send(ReplyUiIntent.ToggleIsOriginImage(it))
                             },
                             modifier = Modifier
-                                .fillMaxSize()
-                                .padding(16.dp),
+                                .padding(16.dp, 8.dp)
+                                .fillMaxSize(),
                         )
                     }
 
@@ -864,7 +864,7 @@ private fun ImagePanel(
 
     Column(
         modifier = modifier,
-        verticalArrangement = Arrangement.Center
+        verticalArrangement = Arrangement.Top
     ) {
         LazyRow(
             modifier = Modifier
