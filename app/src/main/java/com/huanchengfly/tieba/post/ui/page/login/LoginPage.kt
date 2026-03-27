@@ -284,6 +284,8 @@ fun LoginPage(
                             context.getString(R.string.text_please_wait),
                             duration = SnackbarDuration.Indefinite
                         )
+                    }
+                    coroutineScope.launch {
                         AccountUtil.fetchAccountWithBdussFlow(bduss.trim())
                             .catch {
                                 snackbarHostState.currentSnackbarData?.dismiss()
