@@ -26,6 +26,7 @@ import kotlinx.coroutines.flow.flatMapConcat
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.flow.onEmpty
 import kotlinx.coroutines.flow.zip
 import kotlinx.coroutines.launch
 import org.litepal.LitePal
@@ -169,6 +170,56 @@ object AccountUtil {
             }
             .zip(SofireUtils.fetchZid()) { account, zid ->
                 account.apply { this.zid = zid }
+            }
+            .flatMapConcat { account ->
+                TiebaApi.getInstance()
+                    .getUserInfoFlow(account.uid.toLong(), account.bduss, account.sToken)
+                    .map { checkNotNull(it.data_?.user) }
+                    .map { user ->
+                        account.apply {
+                            nameShow = user.nameShow
+                            portrait = user.portrait
+                        }
+                    }
+                    .catch {
+                        emit(account)
+                    }
+            }
+            .onEach { account ->
+                account.saveOrUpdateAsync("uid = ?", account.uid)
+                    .listen {
+                        LitePal.findAllAsync<Account>()
+                            .listen {
+                                mutableAllAccountsState.value = it
+                            }
+                    }
+            }
+            .flowOn(Dispatchers.IO)
+    }
+
+    /**
+     * 仅使用 BDUSS 登录（无需 STOKEN）
+     */
+    @OptIn(ExperimentalCoroutinesApi::class)
+    fun fetchAccountWithBdussFlow(bduss: String): Flow<Account> {
+        return TiebaApi.getInstance()
+            .loginFlow(bduss, "")
+            .zip(SofireUtils.fetchZid().onEmpty { emit("") }) { loginBean, zid ->
+                getAccountInfoByUid(loginBean.user.id)?.apply {
+                    this.bduss = bduss
+                    this.sToken = ""
+                    this.cookie = getBdussCookie(bduss)
+                    updateAccount(this, loginBean)
+                    this.zid = zid
+                } ?: Account(
+                    loginBean.user.id,
+                    loginBean.user.name,
+                    bduss,
+                    loginBean.anti.tbs,
+                    loginBean.user.portrait,
+                    "",
+                    getBdussCookie(bduss),
+                ).apply { this.zid = zid }
             }
             .flatMapConcat { account ->
                 TiebaApi.getInstance()
