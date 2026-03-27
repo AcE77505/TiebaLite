@@ -49,8 +49,10 @@ import com.huanchengfly.tieba.post.ui.widgets.compose.LazyLoad
 import com.huanchengfly.tieba.post.ui.widgets.compose.LoadingState
 import com.huanchengfly.tieba.post.ui.widgets.compose.LocalSnackbarHostState
 import com.huanchengfly.tieba.post.ui.widgets.compose.MyScaffold
+import com.huanchengfly.tieba.post.ui.widgets.compose.PromptDialog
 import com.huanchengfly.tieba.post.ui.widgets.compose.Toolbar
 import com.huanchengfly.tieba.post.ui.widgets.compose.WebView
+import com.huanchengfly.tieba.post.ui.widgets.compose.rememberDialogState
 import com.huanchengfly.tieba.post.ui.widgets.compose.rememberMenuState
 import com.huanchengfly.tieba.post.ui.widgets.compose.rememberSaveableWebViewState
 import com.huanchengfly.tieba.post.ui.widgets.compose.rememberWebViewNavigator
@@ -82,9 +84,18 @@ fun LoginPage(
     val coroutineScope = rememberCoroutineScope()
     val webViewState = rememberSaveableWebViewState()
     val webViewNavigator = rememberWebViewNavigator()
-    var loaded by rememberSaveable {
+    // webViewLoaded tracks whether we've already triggered the WebView URL load
+    var webViewLoaded by rememberSaveable {
         mutableStateOf(false)
     }
+    // loadWebView is set to true when the user selects "Web Login"
+    var loadWebView by rememberSaveable {
+        mutableStateOf(false)
+    }
+    var showMethodSheet by rememberSaveable {
+        mutableStateOf(true)
+    }
+    val bdussDialogState = rememberDialogState()
     var pageTitle by rememberSaveable {
         mutableStateOf("")
     }
@@ -121,9 +132,13 @@ fun LoginPage(
         }
     }
 
-    LazyLoad(loaded = loaded) {
+    // Only load the URL when the user has explicitly chosen "Web Login".
+    // When loadWebView is false (no login method chosen yet), the loaded condition is true,
+    // so LazyLoad does not fire. When loadWebView is set to true (web login selected),
+    // the condition becomes false and LazyLoad fires once to load the URL.
+    LazyLoad(loaded = webViewLoaded || !loadWebView) {
         webViewNavigator.loadUrl(LOGIN_URL)
-        loaded = true
+        webViewLoaded = true
     }
 
     val isLoading by remember {
@@ -180,6 +195,14 @@ fun LoginPage(
                             ) {
                                 Text(text = stringResource(id = R.string.title_refresh))
                             }
+                            DropdownMenuItem(
+                                onClick = {
+                                    dismiss()
+                                    bdussDialogState.show()
+                                }
+                            ) {
+                                Text(text = stringResource(id = R.string.button_bduss_login))
+                            }
                         },
                         menuState = menuState,
                         triggerShape = CircleShape
@@ -198,8 +221,8 @@ fun LoginPage(
             )
         }
     ) { paddingValues ->
+        val snackbarHostState = LocalSnackbarHostState.current
         Box {
-            val snackbarHostState = LocalSnackbarHostState.current
             WebView(
                 state = webViewState,
                 modifier = Modifier
@@ -232,6 +255,84 @@ fun LoginPage(
                 )
             }
         }
+
+        // Method sheet shown on first open; lets user choose web login or BDUSS login
+        if (showMethodSheet) {
+            LoginMethodSheet(
+                onDismiss = {
+                    showMethodSheet = false
+                    // Default to web login if sheet is dismissed without a selection
+                    loadWebView = true
+                },
+                onWebLogin = {
+                    showMethodSheet = false
+                    loadWebView = true
+                },
+                onBdussLogin = {
+                    showMethodSheet = false
+                    bdussDialogState.show()
+                },
+            )
+        }
+
+        // BDUSS login dialog
+        PromptDialog(
+            onConfirm = { bduss ->
+                if (bduss.isNotBlank()) {
+                    coroutineScope.launch {
+                        snackbarHostState.showSnackbar(
+                            context.getString(R.string.text_please_wait),
+                            duration = SnackbarDuration.Indefinite
+                        )
+                        AccountUtil.fetchAccountWithBdussFlow(bduss.trim())
+                            .catch {
+                                snackbarHostState.currentSnackbarData?.dismiss()
+                                snackbarHostState.showSnackbar(
+                                    context.getString(
+                                        R.string.text_login_failed,
+                                        it.getErrorMessage()
+                                    ),
+                                    duration = SnackbarDuration.Short
+                                )
+                            }
+                            .flowOn(Dispatchers.Main)
+                            .collect { account ->
+                                AccountUtil.newAccount(account.uid, account) {
+                                    if (it) {
+                                        AccountUtil.switchAccount(context, account.id)
+                                        coroutineScope.launch {
+                                            snackbarHostState.currentSnackbarData?.dismiss()
+                                            snackbarHostState.showSnackbar(
+                                                context.getString(R.string.text_login_success),
+                                                duration = SnackbarDuration.Short
+                                            )
+                                        }
+                                        coroutineScope.launch {
+                                            delay(1500L)
+                                            navigator.navigateUp()
+                                        }
+                                    } else {
+                                        coroutineScope.launch {
+                                            snackbarHostState.currentSnackbarData?.dismiss()
+                                            snackbarHostState.showSnackbar(
+                                                context.getString(R.string.text_login_failed_default),
+                                                duration = SnackbarDuration.Short
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                    }
+                }
+            },
+            dialogState = bdussDialogState,
+            title = {
+                Text(text = stringResource(id = R.string.button_bduss_login))
+            },
+            content = {
+                Text(text = stringResource(id = R.string.hint_bduss_input))
+            },
+        )
     }
 }
 
