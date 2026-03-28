@@ -184,8 +184,8 @@ object BackupUtil {
         val backupData = BackupData(
             thread_id = threadId,
             title = title,
-            backup_time = backupTime,
             url = "https://tieba.baidu.com/p/$threadId",
+            backup_time = backupTime,
             author = authorInfo,
             posts = backupPosts,
         )
