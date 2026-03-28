@@ -264,10 +264,8 @@ object BackupUtil {
     private fun SubPostList.plainText(): String =
         content.joinToString("") { c ->
             when (c.type) {
-                0, 9, 27, 35, 40 -> c.text
+                0, 1, 4, 9, 27, 35, 40 -> c.text
                 2 -> "#(${c.c})"
-                1 -> c.text
-                4 -> c.text
                 else -> ""
             }
         }

@@ -14,6 +14,7 @@ import androidx.compose.material.IconButton
 import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Text
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Backup
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -113,7 +114,7 @@ fun BackupManagePage(
                     verticalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
                     Icon(
-                        imageVector = Icons.Outlined.Settings,
+                        imageVector = Icons.Outlined.Backup,
                         contentDescription = null,
                         tint = ExtendedTheme.colors.textSecondary,
                         modifier = Modifier.size(48.dp),
