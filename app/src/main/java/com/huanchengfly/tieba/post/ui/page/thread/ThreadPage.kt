@@ -916,10 +916,10 @@ fun ThreadPage(
                         }
                     }
                 )
-                if (showDialog) backupProgressDialogState.dismiss()
+                if (showDialog) backupProgressDialogState.show = false
                 context.toastShort(R.string.toast_backup_success)
             }.onFailure { e ->
-                if (showDialog) backupProgressDialogState.dismiss()
+                if (showDialog) backupProgressDialogState.show = false
                 context.toastShort(R.string.toast_backup_failure, e.message ?: "")
             }
         }
