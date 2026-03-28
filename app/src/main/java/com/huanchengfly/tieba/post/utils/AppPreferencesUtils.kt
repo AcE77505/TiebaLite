@@ -227,6 +227,10 @@ open class AppPreferencesUtils private constructor(ctx: Context) {
 
     var useWebView by DataStoreDelegates.boolean(defaultValue = true, key = "use_webview")
 
+    var backupPath by DataStoreDelegates.string(key = "backup_path")
+
+    var backupSaveVideos by DataStoreDelegates.boolean(defaultValue = false, key = "backup_save_videos")
+
     private object DataStoreDelegates {
         fun int(
             defaultValue: Int = 0,

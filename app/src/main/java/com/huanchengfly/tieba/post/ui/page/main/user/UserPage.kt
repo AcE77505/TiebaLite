@@ -26,6 +26,7 @@ import androidx.compose.material.Scaffold
 import androidx.compose.material.Text
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.AccountCircle
+import androidx.compose.material.icons.rounded.Backup
 import androidx.compose.material.pullrefresh.PullRefreshIndicator
 import androidx.compose.material.pullrefresh.pullRefresh
 import androidx.compose.material.pullrefresh.rememberPullRefreshState
@@ -53,6 +54,7 @@ import com.huanchengfly.tieba.post.ui.common.theme.compose.pullRefreshIndicator
 import com.huanchengfly.tieba.post.ui.page.LocalNavigator
 import com.huanchengfly.tieba.post.ui.page.destinations.AboutPageDestination
 import com.huanchengfly.tieba.post.ui.page.destinations.AppThemePageDestination
+import com.huanchengfly.tieba.post.ui.page.destinations.BackupManagePageDestination
 import com.huanchengfly.tieba.post.ui.page.destinations.HistoryPageDestination
 import com.huanchengfly.tieba.post.ui.page.destinations.SettingsPageDestination
 import com.huanchengfly.tieba.post.ui.page.destinations.ThreadStorePageDestination
@@ -337,6 +339,13 @@ fun UserPage(
                     text = stringResource(id = R.string.title_history),
                     onClick = {
                         navigator.navigate(HistoryPageDestination)
+                    }
+                )
+                ListMenuItem(
+                    icon = Icons.Rounded.Backup,
+                    text = stringResource(id = R.string.title_backup_management),
+                    onClick = {
+                        navigator.navigate(BackupManagePageDestination)
                     }
                 )
                 ListMenuItem(

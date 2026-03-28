@@ -50,6 +50,7 @@ import androidx.compose.material.icons.automirrored.outlined.ChromeReaderMode
 import androidx.compose.material.icons.automirrored.rounded.ChromeReaderMode
 import androidx.compose.material.icons.automirrored.rounded.Sort
 import androidx.compose.material.icons.rounded.AlignVerticalTop
+import androidx.compose.material.icons.rounded.Backup
 import androidx.compose.material.icons.rounded.ContentCopy
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.Face6
@@ -127,6 +128,7 @@ import com.huanchengfly.tieba.post.ui.common.theme.compose.pullRefreshIndicator
 import com.huanchengfly.tieba.post.ui.common.theme.compose.threadBottomBar
 import com.huanchengfly.tieba.post.ui.page.LocalNavigator
 import com.huanchengfly.tieba.post.ui.page.ProvideNavigator
+import com.huanchengfly.tieba.post.ui.page.destinations.BackupSettingsPageDestination
 import com.huanchengfly.tieba.post.ui.page.destinations.CopyTextDialogPageDestination
 import com.huanchengfly.tieba.post.ui.page.destinations.ForumPageDestination
 import com.huanchengfly.tieba.post.ui.page.destinations.ReplyPageDestination
@@ -136,6 +138,7 @@ import com.huanchengfly.tieba.post.ui.page.destinations.UserProfilePageDestinati
 import com.huanchengfly.tieba.post.ui.widgets.compose.Avatar
 import com.huanchengfly.tieba.post.ui.widgets.compose.BackNavigationIcon
 import com.huanchengfly.tieba.post.ui.widgets.compose.BlockTip
+import com.huanchengfly.tieba.post.ui.widgets.compose.Dialog
 import com.huanchengfly.tieba.post.ui.widgets.compose.BlockableContent
 import com.huanchengfly.tieba.post.ui.widgets.compose.Button
 import com.huanchengfly.tieba.post.ui.widgets.compose.Card
@@ -173,6 +176,10 @@ import com.huanchengfly.tieba.post.utils.StringUtil.getShortNumString
 import com.huanchengfly.tieba.post.utils.TiebaUtil
 import com.huanchengfly.tieba.post.utils.Util.getIconColorByLevel
 import com.huanchengfly.tieba.post.utils.appPreferences
+import com.huanchengfly.tieba.post.utils.BACKUP_PROGRESS_DIALOG_THRESHOLD
+import com.huanchengfly.tieba.post.utils.BackupProgress
+import com.huanchengfly.tieba.post.utils.BackupUtil
+import com.huanchengfly.tieba.post.utils.isBackupPathConfigured
 import com.ramcosta.composedestinations.annotation.DeepLink
 import com.ramcosta.composedestinations.annotation.Destination
 import com.ramcosta.composedestinations.navigation.DestinationsNavigator
@@ -840,6 +847,92 @@ fun ThreadPage(
         }
     )
 
+    // ── Backup state ─────────────────────────────────────────────────────────
+    val backupNoPathDialogState = rememberDialogState()
+    val backupProgressDialogState = rememberDialogState()
+    var backupProgressText by remember { mutableStateOf("") }
+
+    ConfirmDialog(
+        dialogState = backupNoPathDialogState,
+        onConfirm = { navigator.navigate(BackupSettingsPageDestination) },
+        confirmText = stringResource(id = R.string.btn_go_to_backup_settings),
+        cancelText = stringResource(id = R.string.button_cancel),
+        title = { Text(text = stringResource(id = R.string.title_backup_settings)) },
+    ) {
+        Text(text = stringResource(id = R.string.msg_backup_path_not_configured))
+    }
+
+    Dialog(
+        dialogState = backupProgressDialogState,
+        cancelable = false,
+        cancelableOnTouchOutside = false,
+        title = { Text(text = stringResource(id = R.string.title_backup_progress)) },
+    ) {
+        Column(
+            modifier = Modifier
+                .padding(horizontal = 24.dp)
+                .padding(bottom = 24.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(16.dp),
+        ) {
+            CircularProgressIndicator()
+            Text(text = backupProgressText)
+        }
+    }
+
+    fun startBackup() {
+        if (!context.isBackupPathConfigured()) {
+            backupNoPathDialogState.show()
+            return
+        }
+        val showDialog = totalPage > BACKUP_PROGRESS_DIALOG_THRESHOLD
+        if (showDialog) {
+            backupProgressText = context.getString(R.string.msg_backup_fetching_page, 0, totalPage)
+            backupProgressDialogState.show()
+        }
+        coroutineScope.launch {
+            runCatching {
+                BackupUtil.backupThread(
+                    context = context,
+                    threadId = threadId,
+                    saveVideos = context.appPreferences.backupSaveVideos,
+                    onProgress = { progress ->
+                        if (showDialog) {
+                            backupProgressText = when (progress) {
+                                is BackupProgress.FetchingPage ->
+                                    context.getString(
+                                        R.string.msg_backup_fetching_page,
+                                        progress.current,
+                                        progress.total
+                                    )
+                                is BackupProgress.DownloadingImages ->
+                                    context.getString(
+                                        R.string.msg_backup_downloading_images,
+                                        progress.current,
+                                        progress.total
+                                    )
+                                is BackupProgress.DownloadingVideos ->
+                                    context.getString(
+                                        R.string.msg_backup_downloading_videos,
+                                        progress.current,
+                                        progress.total
+                                    )
+                                BackupProgress.Saving ->
+                                    context.getString(R.string.msg_backup_saving)
+                            }
+                        }
+                    }
+                )
+                if (showDialog) backupProgressDialogState.show = false
+                context.toastShort(R.string.toast_backup_success)
+            }.onFailure { e ->
+                if (showDialog) backupProgressDialogState.show = false
+                context.toastShort(R.string.toast_backup_failure, e.message ?: "")
+            }
+        }
+    }
+    // ── End backup state ──────────────────────────────────────────────────────
+
     LaunchedEffect(Unit) {
         if (from == ThreadPageFrom.FROM_STORE && extra is ThreadPageFromStoreExtra && extra.maxPid != postId) {
             val result = scaffoldState.snackbarHostState.showSnackbar(
@@ -1257,6 +1350,10 @@ fun ThreadPage(
                                     context,
                                     "https://tieba.baidu.com/p/$threadId?see_lz=${isSeeLz.booleanToString()}"
                                 )
+                            },
+                            onBackupClick = {
+                                closeBottomSheet()
+                                startBackup()
                             },
                             onReportClick = {
                                 val firstPostId =
@@ -2190,6 +2287,7 @@ private fun ThreadMenu(
     onJumpPageClick: () -> Unit,
     onShareClick: () -> Unit,
     onCopyLinkClick: () -> Unit,
+    onBackupClick: () -> Unit,
     onReportClick: () -> Unit,
     onDeleteClick: () -> Unit,
     modifier: Modifier = Modifier,
@@ -2320,6 +2418,13 @@ private fun ThreadMenu(
                 text = stringResource(id = R.string.title_copy_link),
                 iconColor = ExtendedTheme.colors.text,
                 onClick = onCopyLinkClick,
+                modifier = Modifier.fillMaxWidth(),
+            )
+            ListMenuItem(
+                icon = Icons.Rounded.Backup,
+                text = stringResource(id = R.string.title_backup),
+                iconColor = ExtendedTheme.colors.text,
+                onClick = onBackupClick,
                 modifier = Modifier.fillMaxWidth(),
             )
             if (account != null) {
