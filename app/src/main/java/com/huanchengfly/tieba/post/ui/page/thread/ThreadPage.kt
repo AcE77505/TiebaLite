@@ -895,6 +895,7 @@ fun ThreadPage(
                 BackupUtil.backupThread(
                     context = context,
                     threadId = threadId,
+                    saveVideos = context.appPreferences.backupSaveVideos,
                     onProgress = { progress ->
                         if (showDialog) {
                             backupProgressText = when (progress) {
@@ -907,6 +908,12 @@ fun ThreadPage(
                                 is BackupProgress.DownloadingImages ->
                                     context.getString(
                                         R.string.msg_backup_downloading_images,
+                                        progress.current,
+                                        progress.total
+                                    )
+                                is BackupProgress.DownloadingVideos ->
+                                    context.getString(
+                                        R.string.msg_backup_downloading_videos,
                                         progress.current,
                                         progress.total
                                     )

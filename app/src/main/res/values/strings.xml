@@ -384,6 +384,7 @@
     <string name="title_backup_progress">正在备份</string>
     <string name="msg_backup_fetching_page">正在获取帖子内容（%1$d / %2$d 页）</string>
     <string name="msg_backup_downloading_images">正在下载图片（%1$d / %2$d）</string>
+    <string name="msg_backup_downloading_videos">正在下载视频（%1$d / %2$d）</string>
     <string name="msg_backup_saving">正在保存备份文件…</string>
     <string name="toast_backup_success">备份成功</string>
     <string name="toast_backup_failure">备份失败：%1$s</string>
@@ -391,6 +392,8 @@
     <string name="btn_go_to_backup_settings">前往设置</string>
     <string name="title_no_backup">暂无备份</string>
     <string name="msg_no_backup">尚未备份任何贴子</string>
+    <string name="title_backup_save_videos">保存视频</string>
+    <string name="summary_backup_save_videos">开启后备份时同时下载并保存视频文件</string>
     <string name="tip_start">提示：</string>
     <string name="title_dialog_modify_little_tail">修改小尾巴</string>
     <string name="no_more">没有更多了</string>

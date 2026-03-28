@@ -58,8 +58,8 @@ data class BackupPost(
 data class BackupData(
     val thread_id: Long,
     val title: String,
-    val backup_time: Long,
     val url: String,
+    val backup_time: Long,
     val author: BackupUserInfo,
     val posts: List<BackupPost>,
 )
@@ -69,6 +69,7 @@ data class BackupData(
 sealed interface BackupProgress {
     data class FetchingPage(val current: Int, val total: Int) : BackupProgress
     data class DownloadingImages(val current: Int, val total: Int) : BackupProgress
+    data class DownloadingVideos(val current: Int, val total: Int) : BackupProgress
     data object Saving : BackupProgress
 }
 
@@ -86,12 +87,14 @@ object BackupUtil {
      * Backup a thread.
      *
      * @param threadId   Thread (贴子) ID
+     * @param saveVideos When true, video files are downloaded and saved alongside the JSON
      * @param onProgress Progress callback invoked on the calling coroutine dispatcher
      * @throws Exception on any failure
      */
     suspend fun backupThread(
         context: Context,
         threadId: Long,
+        saveVideos: Boolean = false,
         onProgress: suspend (BackupProgress) -> Unit,
     ) = withContext(Dispatchers.IO) {
         // ── 1. Determine backup directory ─────────────────────────────────────
@@ -128,6 +131,8 @@ object BackupUtil {
         // ── 4. Build avatar and image URL maps ────────────────────────────────
         // key = url, value = filename within zip (images/<filename>)
         val imageUrlToFilename = linkedMapOf<String, String>()
+        // Ordered list of video URLs found in the thread (in reading order)
+        val videoUrls = mutableListOf<String>()
 
         fun avatarFilename(user: User?): String? {
             val portrait = user?.portrait ?: return null
@@ -145,7 +150,13 @@ object BackupUtil {
             val postAuthor = post.author ?: User()
             val postAuthorInfo = postAuthor.toBackupUser { avatarFilename(postAuthor) }
 
-            val contentItems = post.content.map { c -> c.toBackupContent(imageUrlToFilename) }
+            val contentItems = post.content.map { c ->
+                val item = c.toBackupContent(imageUrlToFilename)
+                if (item.type == "video" && !item.url.isNullOrBlank()) {
+                    videoUrls.add(item.url)
+                }
+                item
+            }
 
             val replies = post.sub_post_list?.sub_post_list?.map { sub ->
                 val subAuthor = sub.author ?: User()
@@ -168,10 +179,12 @@ object BackupUtil {
             )
         }.sortedBy { it.floor }
 
+        val backupTime = System.currentTimeMillis() / 1000L
+        val basename = "${threadId}_$backupTime"
         val backupData = BackupData(
             thread_id = threadId,
             title = title,
-            backup_time = System.currentTimeMillis() / 1000L,
+            backup_time = backupTime,
             url = "https://tieba.baidu.com/p/$threadId",
             author = authorInfo,
             posts = backupPosts,
@@ -194,10 +207,32 @@ object BackupUtil {
             }
         }
 
+        // ── 6b. Download videos (if saveVideos is enabled) ───────────────────
+        // video files are saved directly in the backup directory as
+        // <basename>_video_<N>.<ext>  (collected for writing after basename is known)
+        val videoFileData = mutableListOf<Pair<String, ByteArray>>() // filename -> bytes
+        if (saveVideos && videoUrls.isNotEmpty()) {
+            val uniqueVideoUrls = videoUrls.distinct()
+            for ((index, url) in uniqueVideoUrls.withIndex()) {
+                onProgress(BackupProgress.DownloadingVideos(index + 1, uniqueVideoUrls.size))
+                try {
+                    val result = DownloadRequest(context, url).execute()
+                    if (result is DownloadResult.Success) {
+                        val ext = url.substringAfterLast('.').substringBefore('?')
+                            .lowercase().let { if (it.length in 2..4) it else "mp4" }
+                        val videoFilename = "${basename}_video_${index + 1}.$ext"
+                        val bytes = result.data.data.newInputStream().use { it.readBytes() }
+                        videoFileData.add(videoFilename to bytes)
+                    }
+                } catch (_: Exception) {
+                    // Skip videos that fail to download
+                }
+            }
+        }
+
         onProgress(BackupProgress.Saving)
 
         // ── 7. Save JSON ──────────────────────────────────────────────────────
-        val basename = "${threadId}_${backupData.backup_time}"
         val jsonFilename = "$basename.json"
         val jsonBytes = backupData.toJson().toByteArray(Charsets.UTF_8)
         val existingJson = treeDir.findFile(jsonFilename)
@@ -230,6 +265,15 @@ object BackupUtil {
                     }
                 }
             } ?: error("Cannot write ZIP file")
+        }
+
+        // ── 9. Save video files ───────────────────────────────────────────────
+        for ((videoFilename, bytes) in videoFileData) {
+            val mime = "video/${videoFilename.substringAfterLast('.')}"
+            val existingVideo = treeDir.findFile(videoFilename)
+            existingVideo?.delete()
+            val videoFile = treeDir.createFile(mime, videoFilename) ?: continue
+            context.contentResolver.openOutputStream(videoFile.uri)?.use { it.write(bytes) }
         }
     }
 
