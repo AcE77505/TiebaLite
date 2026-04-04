@@ -54,6 +54,7 @@ data class BackupPost(
     val time: Long,
     val author: BackupUserInfo,
     val content: List<BackupContentItem>,
+    val agree_num: Long,
     val replies: List<BackupReply>,
 )
 
@@ -184,6 +185,7 @@ object BackupUtil {
                 time = post.time.toLong(),
                 author = postAuthorInfo,
                 content = contentItems,
+                agree_num = post.agree?.agreeNum ?: 0L,
                 replies = replies,
             )
         }.sortedBy { it.floor }
