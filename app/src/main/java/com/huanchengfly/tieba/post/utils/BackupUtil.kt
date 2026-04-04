@@ -19,8 +19,8 @@ import java.util.zip.CRC32
 import java.util.zip.ZipEntry
 import java.util.zip.ZipOutputStream
 
-/** Threshold: show progress dialog when totalPage exceeds this value. */
-const val BACKUP_PROGRESS_DIALOG_THRESHOLD = 1
+/** Threshold: show progress dialog when totalPage exceeds this value. 0 means always show. */
+const val BACKUP_PROGRESS_DIALOG_THRESHOLD = 0
 
 // ──────────────────────────── JSON data classes ──────────────────────────────
 
@@ -59,8 +59,8 @@ data class BackupData(
     val thread_id: Long,
     val title: String,
     val url: String,
-    val backup_time: Long,
     val author: BackupUserInfo,
+    val backup_time: Long,
     val posts: List<BackupPost>,
 )
 
