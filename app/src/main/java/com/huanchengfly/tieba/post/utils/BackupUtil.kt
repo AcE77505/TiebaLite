@@ -193,7 +193,7 @@ object BackupUtil {
             thread_id = threadId,
             title = title,
             url = "https://tieba.baidu.com/p/$threadId",
-            reply_num = threadInfo.replyNum,
+            reply_num = (threadInfo.replyNum - 1).coerceAtLeast(0),
             agree_num = threadInfo.agreeNum.toLong(),
             backup_time = backupTime,
             author = authorInfo,
