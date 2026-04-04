@@ -45,6 +45,7 @@ data class BackupReply(
     val time: Long,
     val author: BackupUserInfo,
     val text: String,
+    val agree_num: Long,
 )
 
 data class BackupPost(
@@ -173,6 +174,7 @@ object BackupUtil {
                     time = sub.time.toLong(),
                     author = subAuthor.toBackupUser { avatarFilename(subAuthor) },
                     text = sub.plainText(),
+                    agree_num = sub.agree?.agreeNum ?: 0L,
                 )
             } ?: emptyList()
 
