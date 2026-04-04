@@ -57,6 +57,7 @@ data class BackupPost(
 )
 
 data class BackupData(
+    val forum_name: String,
     val thread_id: Long,
     val title: String,
     val url: String,
@@ -112,6 +113,7 @@ object BackupUtil {
         val totalPage = data_.page?.new_total_page ?: 1
         val threadInfo = data_.thread ?: error("No thread info")
         val title = threadInfo.title.orEmpty()
+        val forumName = data_.forum?.name.orEmpty()
         val threadAuthor = threadInfo.author ?: User()
 
         // ── 3. Collect posts from all pages ───────────────────────────────────
@@ -185,6 +187,7 @@ object BackupUtil {
         val backupTime = System.currentTimeMillis() / 1000L
         val basename = "${threadId}_$backupTime"
         val backupData = BackupData(
+            forum_name = forumName,
             thread_id = threadId,
             title = title,
             url = "https://tieba.baidu.com/p/$threadId",
@@ -238,6 +241,7 @@ object BackupUtil {
         // ── 7. Save JSON ──────────────────────────────────────────────────────
         val jsonFilename = "$basename.json"
         val jsonObj = JsonObject().apply {
+            addProperty("forum_name", backupData.forum_name)
             addProperty("thread_id", backupData.thread_id)
             addProperty("title", backupData.title)
             addProperty("url", backupData.url)
