@@ -61,6 +61,8 @@ data class BackupData(
     val thread_id: Long,
     val title: String,
     val url: String,
+    val reply_num: Int,
+    val agree_num: Long,
     val author: BackupUserInfo,
     val backup_time: Long,
     val posts: List<BackupPost>,
@@ -191,6 +193,8 @@ object BackupUtil {
             thread_id = threadId,
             title = title,
             url = "https://tieba.baidu.com/p/$threadId",
+            reply_num = threadInfo.replyNum,
+            agree_num = threadInfo.agreeNum.toLong(),
             backup_time = backupTime,
             author = authorInfo,
             posts = backupPosts,
@@ -245,6 +249,8 @@ object BackupUtil {
             addProperty("thread_id", backupData.thread_id)
             addProperty("title", backupData.title)
             addProperty("url", backupData.url)
+            addProperty("reply_num", backupData.reply_num)
+            addProperty("agree_num", backupData.agree_num)
             add("author", gson.toJsonTree(backupData.author))
             addProperty("backup_time", backupData.backup_time)
             add("posts", gson.toJsonTree(backupData.posts))
