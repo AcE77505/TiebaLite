@@ -6,12 +6,13 @@ import androidx.documentfile.provider.DocumentFile
 import com.github.panpf.sketch.request.DownloadRequest
 import com.github.panpf.sketch.request.DownloadResult
 import com.github.panpf.sketch.request.execute
+import com.google.gson.Gson
+import com.google.gson.JsonObject
 import com.huanchengfly.tieba.post.api.models.protos.PbContent
 import com.huanchengfly.tieba.post.api.models.protos.Post
 import com.huanchengfly.tieba.post.api.models.protos.SubPostList
 import com.huanchengfly.tieba.post.api.models.protos.User
 import com.huanchengfly.tieba.post.repository.PbPageRepository
-import com.huanchengfly.tieba.post.toJson
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
@@ -76,6 +77,8 @@ sealed interface BackupProgress {
 // ──────────────────────────── BackupUtil ──────────────────────────────────────
 
 object BackupUtil {
+
+    private val gson = Gson()
 
     fun isBackupPathConfigured(context: Context): Boolean =
         !context.appPreferences.backupPath.isNullOrEmpty()
@@ -234,7 +237,15 @@ object BackupUtil {
 
         // ── 7. Save JSON ──────────────────────────────────────────────────────
         val jsonFilename = "$basename.json"
-        val jsonBytes = backupData.toJson().toByteArray(Charsets.UTF_8)
+        val jsonObj = JsonObject().apply {
+            addProperty("thread_id", backupData.thread_id)
+            addProperty("title", backupData.title)
+            addProperty("url", backupData.url)
+            add("author", gson.toJsonTree(backupData.author))
+            addProperty("backup_time", backupData.backup_time)
+            add("posts", gson.toJsonTree(backupData.posts))
+        }
+        val jsonBytes = jsonObj.toString().toByteArray(Charsets.UTF_8)
         val existingJson = treeDir.findFile(jsonFilename)
         existingJson?.delete()
         val jsonFile = treeDir.createFile("application/json", jsonFilename)
