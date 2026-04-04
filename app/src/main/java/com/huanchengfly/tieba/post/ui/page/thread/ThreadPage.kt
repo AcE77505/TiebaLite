@@ -139,6 +139,7 @@ import com.huanchengfly.tieba.post.ui.widgets.compose.Avatar
 import com.huanchengfly.tieba.post.ui.widgets.compose.BackNavigationIcon
 import com.huanchengfly.tieba.post.ui.widgets.compose.BlockTip
 import com.huanchengfly.tieba.post.ui.widgets.compose.Dialog
+import com.huanchengfly.tieba.post.ui.widgets.compose.DialogNegativeButton
 import com.huanchengfly.tieba.post.ui.widgets.compose.BlockableContent
 import com.huanchengfly.tieba.post.ui.widgets.compose.Button
 import com.huanchengfly.tieba.post.ui.widgets.compose.Card
@@ -185,6 +186,8 @@ import com.ramcosta.composedestinations.annotation.Destination
 import com.ramcosta.composedestinations.navigation.DestinationsNavigator
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.launch
 import kotlinx.serialization.Serializable
@@ -851,6 +854,7 @@ fun ThreadPage(
     val backupNoPathDialogState = rememberDialogState()
     val backupProgressDialogState = rememberDialogState()
     var backupProgressText by remember { mutableStateOf("") }
+    var backupJob: Job? by remember { mutableStateOf(null) }
 
     ConfirmDialog(
         dialogState = backupNoPathDialogState,
@@ -867,11 +871,17 @@ fun ThreadPage(
         cancelable = false,
         cancelableOnTouchOutside = false,
         title = { Text(text = stringResource(id = R.string.title_backup_progress)) },
+        buttons = {
+            DialogNegativeButton(
+                text = stringResource(id = R.string.button_cancel),
+                onClick = { backupJob?.cancel() },
+            )
+        },
     ) {
         Column(
             modifier = Modifier
                 .padding(horizontal = 24.dp)
-                .padding(bottom = 24.dp),
+                .padding(bottom = 8.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
@@ -890,8 +900,9 @@ fun ThreadPage(
             backupProgressText = context.getString(R.string.msg_backup_fetching_page, 0, totalPage)
             backupProgressDialogState.show()
         }
-        coroutineScope.launch {
-            runCatching {
+        backupJob?.cancel()
+        backupJob = coroutineScope.launch {
+            try {
                 BackupUtil.backupThread(
                     context = context,
                     threadId = threadId,
@@ -923,11 +934,13 @@ fun ThreadPage(
                         }
                     }
                 )
-                if (showDialog) backupProgressDialogState.show = false
                 context.toastShort(R.string.toast_backup_success)
-            }.onFailure { e ->
-                if (showDialog) backupProgressDialogState.show = false
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
                 context.toastShort(R.string.toast_backup_failure, e.message ?: "")
+            } finally {
+                if (showDialog) backupProgressDialogState.show = false
             }
         }
     }
