@@ -25,13 +25,10 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.imeAnimationTarget
-import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.requiredHeightIn
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.windowInsetsBottomHeight
-import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.grid.GridCells
@@ -58,7 +55,6 @@ import androidx.compose.material.icons.outlined.InsertPhoto
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
@@ -109,7 +105,6 @@ import com.huanchengfly.tieba.post.ui.widgets.compose.DialogPositiveButton
 import com.huanchengfly.tieba.post.ui.widgets.compose.DialogState
 import com.huanchengfly.tieba.post.ui.widgets.compose.MyBackHandler
 import com.huanchengfly.tieba.post.ui.widgets.compose.VerticalDivider
-import com.huanchengfly.tieba.post.ui.widgets.compose.debounceClickable
 import com.huanchengfly.tieba.post.ui.widgets.compose.rememberDialogState
 import com.huanchengfly.tieba.post.ui.widgets.edittext.widget.UndoableEditText
 import com.huanchengfly.tieba.post.utils.AccountUtil
@@ -444,7 +439,7 @@ internal fun ReplyPageContent(
         Modifier
             .fillMaxWidth()
             .navigationBarsPadding()
-            .imePadding()
+            .consumeWindowInsets(WindowInsets.ime)
     } else {
         Modifier
             .fillMaxWidth()
@@ -466,7 +461,10 @@ internal fun ReplyPageContent(
                 if (imeAnimationEnd && (!visibility && imeAnimationTargetHeight > 10)) {
                     hideKeyboard()
                 }
-            },
+            }
+            .padding(bottom = with(density) {
+                imeAnimationTargetHeight.toDp()
+            }),
         verticalArrangement = Arrangement.Bottom
     ) {
         Row(
